@@ -1,0 +1,11 @@
+argparse==1.2.1
+google-common==0.0.1
+numpy==1.10.4
+protobuf==3.0.0b2
+pymesos==0.1.2
+six==1.10.0
+wheel==0.29.0
+wsgiref==0.1.2
+zkpython==0.4.2
+-e git+https://github.com/tfmesos/mesos.interface.git@v0.28.1_proto3#egg=mesos.interface
+https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.8.0rc0-cp27-none-linux_x86_64.whl

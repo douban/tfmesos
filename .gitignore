@@ -1,0 +1,6 @@
+*.py[co]
+*.swp
+venv/
+*.egg-info/
+build/
+dist/

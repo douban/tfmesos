@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+set -x
+VIRTUAL_ENV=venv
+if [[ ! -e $VIRTUAL_ENV ]]; then
+  virtualenv $VIRTUAL_ENV
+fi
+
+$VIRTUAL_ENV/bin/pip install --upgrade pip
+$VIRTUAL_ENV/bin/pip install -r requirements.txt
+$VIRTUAL_ENV/bin/pip install --upgrade setuptools || true
+$VIRTUAL_ENV/bin/python setup.py develop

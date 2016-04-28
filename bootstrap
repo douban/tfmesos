@@ -8,5 +8,4 @@ fi
 
 $VIRTUAL_ENV/bin/pip install --upgrade pip
 $VIRTUAL_ENV/bin/pip install -r requirements.txt
-$VIRTUAL_ENV/bin/pip install --upgrade setuptools || true
-$VIRTUAL_ENV/bin/python setup.py develop
+$VIRTUAL_ENV/bin/pip install -e .

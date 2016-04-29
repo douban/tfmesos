@@ -75,7 +75,7 @@ class Task(object):
                 v.mode = mesos_pb2.Volume.RO
 
             for dst, src in self.volumes.iteritems():
-                v = ti.containe.volumes.add()
+                v = ti.container.volumes.add()
                 v.container_path = dst
                 v.host_path = src
                 v.mode = mesos_pb2.Volume.RW

@@ -106,6 +106,10 @@ class Task(object):
                     p.key = 'device'
                     p.value = path
 
+                env = ti.command.environment.variables.add()
+                env.name = 'NV_DOCKER'
+                env.value = '/usr/bin/docker'
+
         ti.command.shell = True
         cmd = [
             sys.executable, "-m", "%s.server" % __package__,

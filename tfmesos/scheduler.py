@@ -209,7 +209,7 @@ class TFMesosScheduler(Scheduler):
 
                 offered_cpus -= task.cpus
                 offered_mem -= task.mem
-                gpus = int(math.ceil(self.gpus))
+                gpus = int(math.ceil(task.gpus))
                 gpu_ids = offered_gpus[:gpus]
                 offered_gpus = offered_gpus[gpus:]
                 task.offered = True

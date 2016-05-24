@@ -1,6 +1,10 @@
 import os
+import re
 import sys
+import json
 import math
+import zlib
+import base64
 import select
 import signal
 import socket
@@ -52,7 +56,7 @@ class Task(object):
           addr=%s
         >''' % (self.mesos_task_id, self.addr))
 
-    def to_task_info(self, offer, master_addr, gpu_ids=[]):
+    def to_task_info(self, offer, master_addr, gpu_uuids=[], gpu_mapping={}):
         ti = mesos_pb2.TaskInfo()
         ti.task_id.value = str(self.mesos_task_id)
         ti.slave_id.value = offer.slave_id.value
@@ -78,7 +82,7 @@ class Task(object):
             gpus = ti.resources.add()
             gpus.name = 'gpus'
             gpus.type = mesos_pb2.Value.SET
-            gpus.set.item.extend(gpu_ids)
+            gpus.set.item.extend(gpu_uuids)
 
         if image is not None:
             ti.container.type = mesos_pb2.ContainerInfo.DOCKER
@@ -96,19 +100,13 @@ class Task(object):
                 v.mode = mesos_pb2.Volume.RW
 
             if self.gpus:
-                for id, gpu_id in enumerate(gpu_ids):
-                    p = ti.container.docker.parameters.add()
-                    p.key = 'device'
-                    p.value = '/dev/nvidia%d:/dev/nvidia%d' % (gpu_id, id)
-
-                for path in ['/dev/nvidiactl', '/dev/nvidia-uvm']:
-                    p = ti.container.docker.parameters.add()
-                    p.key = 'device'
-                    p.value = path
-
                 env = ti.command.environment.variables.add()
                 env.name = 'NV_DOCKER'
                 env.value = '/usr/bin/docker'
+
+                env = ti.command.environment.variables.add()
+                env.name = 'NV_GPU'
+                env.value = ','.join(gpu_mapping[uuid] for uuid in gpu_uuids)
 
         ti.command.shell = True
         cmd = [
@@ -174,6 +172,23 @@ class TFMesosScheduler(Scheduler):
             global logger
             setup_logger(logger)
 
+    def _get_gpu_info(self, attributes):
+        attr = None
+        for a in attributes:
+            if a.name == 'gpus':
+                attr = a.text.value
+                break
+
+        if attr is None:
+            return {}
+
+        info = json.loads(zlib.decompress(
+            base64.b64decode(attr, '-_')))
+        return {
+            (d['UUID'], re.findall('\d+$', d['Path'])[0])
+            for d in info['Devices']
+        }
+
     def resourceOffers(self, driver, offers):
         '''
         Offer resources and launch tasks
@@ -188,6 +203,7 @@ class TFMesosScheduler(Scheduler):
             offered_cpus = offered_mem = 0.0
             offered_gpus = []
             offered_tasks = []
+            gpu_mapping = self._get_gpu_info(offer.attributes)
 
             for resource in offer.resources:
                 if resource.name == "cpus":
@@ -210,12 +226,13 @@ class TFMesosScheduler(Scheduler):
                 offered_cpus -= task.cpus
                 offered_mem -= task.mem
                 gpus = int(math.ceil(task.gpus))
-                gpu_ids = offered_gpus[:gpus]
+                gpu_uuids = offered_gpus[:gpus]
                 offered_gpus = offered_gpus[gpus:]
                 task.offered = True
                 offered_tasks.append(
                     task.to_task_info(
-                        offer, self.addr, gpu_ids=gpu_ids))
+                        offer, self.addr,
+                        gpu_uuids=gpu_uuids, gpu_mapping=gpu_mapping))
 
             driver.launchTasks(offer.id, offered_tasks, mesos_pb2.Filters())
 

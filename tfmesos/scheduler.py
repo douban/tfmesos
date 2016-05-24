@@ -200,11 +200,11 @@ class TFMesosScheduler(Scheduler):
             send(task.connection, response)
             assert recv(task.connection) == "ok"
             logger.info(
-                "Device /job:%s/task:%s activated @ grpc://%s " % (
-                    task.job_name,
-                    task.task_index,
-                    task.addr
-                )
+                "Device /job:%s/task:%s activated @ grpc://%s ",
+                task.job_name,
+                task.task_index,
+                task.addr
+
             )
             task.connection.close()
         return targets
@@ -247,9 +247,8 @@ class TFMesosScheduler(Scheduler):
     def registered(self, driver, framework_id, master_info):
         logger.info(
             "Tensorflow cluster registered. "
-            "( http://%s:%s/#/frameworks/%s )" % (
-                master_info.hostname, master_info.port, framework_id.value
-            )
+            "( http://%s:%s/#/frameworks/%s )",
+            master_info.hostname, master_info.port, framework_id.value
         )
 
     def statusUpdate(self, driver, update):
@@ -257,25 +256,28 @@ class TFMesosScheduler(Scheduler):
         if update.state != mesos_pb2.TASK_RUNNING:
             task = self.tasks[mesos_task_id]
             if self.started:
-                logger.error("Task failed: %s" % task)
-                _raise(RuntimeError('Task %s failed!' % id))
+                logger.error("Task failed: %s, %s", task, update.message)
+                _raise(RuntimeError(
+                    'Task %s failed! %s' % (id, update.message)))
             else:
-                logger.warn("Task failed: %s" % task)
-                task.connection.close()
+                logger.warn("Task failed: %s, %s", task, update.message)
+                if task.connection:
+                    task.connection.close()
+
                 driver.reviveOffers()
 
     def slaveLost(self, driver, slaveId):
         if self.started:
-            logger.error("Slave %s lost:" % slaveId.value)
+            logger.error("Slave %s lost:", slaveId.value)
             _raise(RuntimeError('Slave %s lost' % slaveId))
 
     def executorLost(self, driver, executorId, slaveId, status):
         if self.started:
-            logger.error("Executor %s lost:" % executorId.value)
+            logger.error("Executor %s lost:", executorId.value)
             _raise(RuntimeError('Executor %s@%s lost' % (executorId, slaveId)))
 
     def error(self, driver, message):
-        logger.error("Mesos error: %s" % message)
+        logger.error("Mesos error: %s", message)
         _raise(RuntimeError('Error ' + message))
 
     def stop(self):
@@ -283,7 +285,9 @@ class TFMesosScheduler(Scheduler):
 
         if hasattr(self, "tasks"):
             for task in getattr(self, "tasks", []):
-                task.connection.close()
+                if task.connection:
+                    task.connection.close()
+
             del self.tasks
 
         if hasattr(self, "driver"):

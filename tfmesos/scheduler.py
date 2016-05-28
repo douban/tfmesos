@@ -182,10 +182,13 @@ class TFMesosScheduler(Scheduler):
         if attr is None:
             return {}
 
+        if isinstance(attr, unicode):
+            attr = attr.encode('ascii')
+
         info = json.loads(zlib.decompress(
             base64.b64decode(attr, '-_')))
         return {
-            (d['UUID'], re.findall('\d+$', d['Path'])[0])
+            d['UUID']: re.findall('\d+$', d['Path'])[0]
             for d in info['Devices']
         }
 

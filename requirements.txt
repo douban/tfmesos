@@ -1,8 +1,8 @@
 argparse==1.2.1
 google-common==0.0.1
-numpy==1.10.4
+numpy==1.11.1
 protobuf==3.0.0b2
-pymesos==0.1.2
+pymesos==0.1.5
 six==1.10.0
 wheel==0.29.0
 wsgiref==0.1.2

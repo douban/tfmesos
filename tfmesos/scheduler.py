@@ -1,10 +1,7 @@
 import os
 import re
 import sys
-import json
 import math
-import zlib
-import base64
 import select
 import signal
 import socket
@@ -56,7 +53,7 @@ class Task(object):
           addr=%s
         >''' % (self.mesos_task_id, self.addr))
 
-    def to_task_info(self, offer, master_addr, gpu_uuids=[], gpu_mapping={}):
+    def to_task_info(self, offer, master_addr, gpu_uuids=[]):
         ti = mesos_pb2.TaskInfo()
         ti.task_id.value = str(self.mesos_task_id)
         ti.slave_id.value = offer.slave_id.value
@@ -106,7 +103,7 @@ class Task(object):
 
                 env = ti.command.environment.variables.add()
                 env.name = 'NV_GPU'
-                env.value = ','.join(gpu_mapping[uuid] for uuid in gpu_uuids)
+                env.value = ','.join(gpu_uuids)
 
         ti.command.shell = True
         cmd = [
@@ -172,26 +169,6 @@ class TFMesosScheduler(Scheduler):
             global logger
             setup_logger(logger)
 
-    def _get_gpu_info(self, attributes):
-        attr = None
-        for a in attributes:
-            if a.name == 'gpus':
-                attr = a.text.value
-                break
-
-        if attr is None:
-            return {}
-
-        if isinstance(attr, unicode):
-            attr = attr.encode('ascii')
-
-        info = json.loads(zlib.decompress(
-            base64.b64decode(attr, '-_')))
-        return {
-            d['UUID']: re.findall('\d+$', d['Path'])[0]
-            for d in info['Devices']
-        }
-
     def resourceOffers(self, driver, offers):
         '''
         Offer resources and launch tasks
@@ -206,7 +183,6 @@ class TFMesosScheduler(Scheduler):
             offered_cpus = offered_mem = 0.0
             offered_gpus = []
             offered_tasks = []
-            gpu_mapping = self._get_gpu_info(offer.attributes)
 
             for resource in offer.resources:
                 if resource.name == "cpus":
@@ -235,7 +211,7 @@ class TFMesosScheduler(Scheduler):
                 offered_tasks.append(
                     task.to_task_info(
                         offer, self.addr,
-                        gpu_uuids=gpu_uuids, gpu_mapping=gpu_mapping))
+                        gpu_uuids=gpu_uuids))
 
             driver.launchTasks(offer.id, offered_tasks, mesos_pb2.Filters())
 

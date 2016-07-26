@@ -1,4 +1,5 @@
-FROM nvidia/cuda:cudnn-runtime
+FROM nvidia/cuda:7.5-cudnn5-runtime
+RUN ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.5 /usr/lib/x86_64-linux-gnu/libcudnn.so
 RUN apt-get update && apt-get install --no-install-recommends -y \
         g++ \
         libopenblas-dev \

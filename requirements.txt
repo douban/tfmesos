@@ -7,5 +7,5 @@ six==1.10.0
 wheel==0.29.0
 wsgiref==0.1.2
 zkpython==0.4.2
--e git+https://github.com/douban/mesos.interface.git#egg=mesos.interface
+git+https://github.com/douban/mesos.interface.git#egg=mesos.interface
 https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow-0.9.0-cp27-none-linux_x86_64.whl

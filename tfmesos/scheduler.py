@@ -8,6 +8,7 @@ import socket
 import thread
 import getpass
 import logging
+import urllib2
 import textwrap
 from mesos.interface import mesos_pb2, Scheduler
 from pymesos import MesosSchedulerDriver
@@ -71,16 +72,6 @@ class Task(object):
 
         image = os.environ.get('DOCKER_IMAGE')
 
-        if self.gpus:
-            if image is None:
-                logger.warning(
-                    'GPU resource would not be re-mapped without Docker')
-
-            gpus = ti.resources.add()
-            gpus.name = 'gpus'
-            gpus.type = mesos_pb2.Value.SET
-            gpus.set.item.extend(gpu_uuids)
-
         if image is not None:
             ti.container.type = mesos_pb2.ContainerInfo.DOCKER
             ti.container.docker.image = image
@@ -96,14 +87,40 @@ class Task(object):
                 v.host_path = src
                 v.mode = mesos_pb2.Volume.RW
 
-            if self.gpus:
-                env = ti.command.environment.variables.add()
-                env.name = 'NV_DOCKER'
-                env.value = '/usr/bin/docker'
+            if self.gpus and gpu_uuids:
+                hostname = offer.hostname
+                url = 'http://%s:3476/docker/cli?dev=%s' % (
+                    hostname, urllib2.quote(
+                        ' '.join(gpu_uuids)
+                    )
+                )
 
-                env = ti.command.environment.variables.add()
-                env.name = 'NV_GPU'
-                env.value = ','.join(gpu_uuids)
+                try:
+                    docker_args = urllib2.urlopen(url).read()
+                    for arg in docker_args.split():
+                        k, v  = arg.split('=')
+                        assert k.startswith('--')
+                        k = k[2:]
+                        p = ti.container.docker.parameters.add()
+                        p.key = k
+                        p.value = v
+
+                    gpus = ti.resources.add()
+                    gpus.name = 'gpus'
+                    gpus.type = mesos_pb2.Value.SET
+                    gpus.set.item.extend(gpu_uuids)
+                except Exception:
+                    logger.exception(
+                        'fail to determine remote device parameter,'
+                        ' disable gpu resources'
+                    )
+
+        else:
+            if self.gpus and gpu_uuids:
+                gpus = ti.resources.add()
+                gpus.name = 'gpus'
+                gpus.type = mesos_pb2.Value.SET
+                gpus.set.item.extend(gpu_uuids)
 
         ti.command.shell = True
         cmd = [

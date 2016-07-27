@@ -1,11 +1,14 @@
 import os
+import re
 import sys
+import math
 import select
 import signal
 import socket
 import thread
 import getpass
 import logging
+import urllib2
 import textwrap
 from mesos.interface import mesos_pb2, Scheduler
 from pymesos import MesosSchedulerDriver
@@ -18,22 +21,24 @@ logger = logging.getLogger(__name__)
 
 class Job(object):
 
-    def __init__(self, name, num, cpus=1.0, mem=1024.0):
+    def __init__(self, name, num, cpus=1.0, mem=1024.0, gpus=0):
         self.name = name
         self.num = num
         self.cpus = cpus
+        self.gpus = gpus
         self.mem = mem
 
 
 class Task(object):
 
     def __init__(self, mesos_task_id, job_name, task_index,
-                 cpus=1.0, mem=1024.0, volumes={}):
+                 cpus=1.0, mem=1024.0, gpus=0, volumes={}):
         self.mesos_task_id = mesos_task_id
         self.job_name = job_name
         self.task_index = task_index
 
         self.cpus = cpus
+        self.gpus = gpus
         self.mem = mem
         self.volumes = volumes
         self.offered = False
@@ -49,7 +54,7 @@ class Task(object):
           addr=%s
         >''' % (self.mesos_task_id, self.addr))
 
-    def to_task_info(self, offer, master_addr):
+    def to_task_info(self, offer, master_addr, gpu_uuids=[]):
         ti = mesos_pb2.TaskInfo()
         ti.task_id.value = str(self.mesos_task_id)
         ti.slave_id.value = offer.slave_id.value
@@ -65,9 +70,11 @@ class Task(object):
         mem.type = mesos_pb2.Value.SCALAR
         mem.scalar.value = self.mem
 
-        if 'DOCKER_IMAGE' in os.environ:
+        image = os.environ.get('DOCKER_IMAGE')
+
+        if image is not None:
             ti.container.type = mesos_pb2.ContainerInfo.DOCKER
-            ti.container.docker.image = os.environ['DOCKER_IMAGE']
+            ti.container.docker.image = image
 
             for path in ['/etc/passwd', '/etc/group']:
                 v = ti.container.volumes.add()
@@ -79,6 +86,41 @@ class Task(object):
                 v.container_path = dst
                 v.host_path = src
                 v.mode = mesos_pb2.Volume.RW
+
+            if self.gpus and gpu_uuids:
+                hostname = offer.hostname
+                url = 'http://%s:3476/docker/cli?dev=%s' % (
+                    hostname, urllib2.quote(
+                        ' '.join(gpu_uuids)
+                    )
+                )
+
+                try:
+                    docker_args = urllib2.urlopen(url).read()
+                    for arg in docker_args.split():
+                        k, v  = arg.split('=')
+                        assert k.startswith('--')
+                        k = k[2:]
+                        p = ti.container.docker.parameters.add()
+                        p.key = k
+                        p.value = v
+
+                    gpus = ti.resources.add()
+                    gpus.name = 'gpus'
+                    gpus.type = mesos_pb2.Value.SET
+                    gpus.set.item.extend(gpu_uuids)
+                except Exception:
+                    logger.exception(
+                        'fail to determine remote device parameter,'
+                        ' disable gpu resources'
+                    )
+
+        else:
+            if self.gpus and gpu_uuids:
+                gpus = ti.resources.add()
+                gpus.name = 'gpus'
+                gpus.type = mesos_pb2.Value.SET
+                gpus.set.item.extend(gpu_uuids)
 
         ti.command.shell = True
         cmd = [
@@ -136,6 +178,7 @@ class TFMesosScheduler(Scheduler):
                         task_index,
                         cpus=job.cpus,
                         mem=job.mem,
+                        gpus=job.gpus,
                         volumes=volumes,
                     )
                 )
@@ -155,6 +198,7 @@ class TFMesosScheduler(Scheduler):
                 continue
 
             offered_cpus = offered_mem = 0.0
+            offered_gpus = []
             offered_tasks = []
 
             for resource in offer.resources:
@@ -162,20 +206,29 @@ class TFMesosScheduler(Scheduler):
                     offered_cpus = resource.scalar.value
                 elif resource.name == "mem":
                     offered_mem = resource.scalar.value
+                elif resource.name == "gpus":
+                    offered_gpus = resource.set.item
 
             for task in self.tasks:
                 if task.offered:
                     continue
 
                 if not (task.cpus <= offered_cpus and
-                        task.mem <= offered_mem):
+                        task.mem <= offered_mem and
+                        task.gpus <= len(offered_gpus)):
 
                     continue
 
                 offered_cpus -= task.cpus
                 offered_mem -= task.mem
+                gpus = int(math.ceil(task.gpus))
+                gpu_uuids = offered_gpus[:gpus]
+                offered_gpus = offered_gpus[gpus:]
                 task.offered = True
-                offered_tasks.append(task.to_task_info(offer, self.addr))
+                offered_tasks.append(
+                    task.to_task_info(
+                        offer, self.addr,
+                        gpu_uuids=gpu_uuids))
 
             driver.launchTasks(offer.id, offered_tasks, mesos_pb2.Filters())
 
@@ -195,6 +248,7 @@ class TFMesosScheduler(Scheduler):
                 "task_index": task.task_index,
                 "cpus": task.cpus,
                 "mem": task.mem,
+                "gpus": task.gpus,
                 "cluster_def": cluster_def,
             }
             send(task.connection, response)

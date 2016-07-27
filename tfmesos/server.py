@@ -29,6 +29,7 @@ def main(argv):
     task_index = response["task_index"]
     cpus = response["cpus"]
     mem = response["mem"]
+    gpus = response["gpus"]
 
     server_def = tf.train.ServerDef(
         cluster=tf.train.ClusterSpec(cluster_def).as_cluster_def(),
@@ -38,7 +39,7 @@ def main(argv):
     )
 
     server_def.default_session_config.device_count["CPU"] = int(cpus)
-    server_def.default_session_config.device_count["GPU"] = 0
+    server_def.default_session_config.device_count["GPU"] = int(gpus)
     (soft, hard) = resource.getrlimit(resource.RLIMIT_AS)
     soft = min(float(mem), soft, hard)
     resource.setrlimit(resource.RLIMIT_AS, (soft, hard))

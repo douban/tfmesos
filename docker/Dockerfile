@@ -1,5 +1,5 @@
 FROM nvidia/cuda:7.5-cudnn4-runtime
-RUN ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.5 /usr/lib/x86_64-linux-gnu/libcudnn.so
+RUN ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.4 /usr/lib/x86_64-linux-gnu/libcudnn.so
 RUN echo '\
     deb mirror://mirrors.ubuntu.com/mirrors.txt trusty main\n\
     deb mirror://mirrors.ubuntu.com/mirrors.txt trusty universe\n\

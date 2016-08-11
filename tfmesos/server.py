@@ -47,6 +47,7 @@ def main(argv):
     server = tf.train.Server(server_def)
 
     send(c, 'ok')
+    assert c.recv() == ''
     c.close()
     try:
         server.join()

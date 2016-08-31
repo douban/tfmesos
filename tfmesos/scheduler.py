@@ -291,6 +291,8 @@ class TFMesosScheduler(Scheduler):
                         task.initalized = True
                     else:
                         c.close()
+
+            self.started = True
             return self._start_tf_cluster()
         except Exception:
             self.stop()
@@ -310,10 +312,12 @@ class TFMesosScheduler(Scheduler):
         if update.state != mesos_pb2.TASK_RUNNING:
             task = self.tasks[mesos_task_id]
             if self.started:
-                logger.error("Task failed: %s, %s", task, update.message)
-                _raise(RuntimeError(
-                    'Task %s failed! %s' % (id, update.message)))
+                if update.state != mesos_pb2.TASK_FINISHED:
+                    logger.error("Task failed: %s, %s", task, update.message)
+                    _raise(RuntimeError(
+                        'Task %s failed! %s' % (id, update.message)))
             else:
+                print update.state
                 logger.warn("Task failed: %s, %s", task, update.message)
                 if task.connection:
                     task.connection.close()

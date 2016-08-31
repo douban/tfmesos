@@ -21,18 +21,20 @@ logger = logging.getLogger(__name__)
 
 class Job(object):
 
-    def __init__(self, name, num, cpus=1.0, mem=1024.0, gpus=0):
+    def __init__(self, name, num, cpus=1.0, mem=1024.0, gpus=0, cmd=None, start=0):
         self.name = name
         self.num = num
         self.cpus = cpus
         self.gpus = gpus
         self.mem = mem
+        self.cmd = cmd
+        self.start = start
 
 
 class Task(object):
 
     def __init__(self, mesos_task_id, job_name, task_index,
-                 cpus=1.0, mem=1024.0, gpus=0, volumes={}):
+                 cpus=1.0, mem=1024.0, gpus=0, cmd=None, volumes={}):
         self.mesos_task_id = mesos_task_id
         self.job_name = job_name
         self.task_index = task_index
@@ -40,6 +42,7 @@ class Task(object):
         self.cpus = cpus
         self.gpus = gpus
         self.mem = mem
+        self.cmd = cmd
         self.volumes = volumes
         self.offered = False
 
@@ -161,15 +164,16 @@ _prev_handler = signal.signal(signal.SIGINT, _handle_sigint)
 class TFMesosScheduler(Scheduler):
 
     def __init__(self, task_spec, master=None, name=None, quiet=False,
-                 volumes={}):
+                 volumes={}, local_task=None):
         self.started = False
         self.master = master or os.environ['MESOS_MASTER']
         self.name = name or '[tensorflow] %s %s' % (
             os.path.abspath(sys.argv[0]), ' '.join(sys.argv[1:]))
+        self.local_task=local_task
         self.task_spec = task_spec
         self.tasks = []
         for job in task_spec:
-            for task_index in xrange(job.num):
+            for task_index in xrange(job.start, job.num):
                 mesos_task_id = len(self.tasks)
                 self.tasks.append(
                     Task(
@@ -179,7 +183,8 @@ class TFMesosScheduler(Scheduler):
                         cpus=job.cpus,
                         mem=job.mem,
                         gpus=job.gpus,
-                        volumes=volumes,
+                        cmd=job.cmd,
+                        volumes=volumes
                     )
                 )
         if not quiet:
@@ -242,6 +247,11 @@ class TFMesosScheduler(Scheduler):
             targets[target_name] = grpc_addr
             cluster_def.setdefault(task.job_name, []).append(task.addr)
 
+
+        if self.local_task:
+            job_name, addr = self.local_task
+            cluster_def.setdefault(job_name, []).insert(0, addr)
+
         for task in self.tasks:
             response = {
                 "job_name": task.job_name,
@@ -249,6 +259,8 @@ class TFMesosScheduler(Scheduler):
                 "cpus": task.cpus,
                 "mem": task.mem,
                 "gpus": task.gpus,
+                "cmd": task.cmd,
+                "cwd": os.getcwd(),
                 "cluster_def": cluster_def,
             }
             send(task.connection, response)
@@ -291,6 +303,8 @@ class TFMesosScheduler(Scheduler):
                         task.initalized = True
                     else:
                         c.close()
+
+            self.started = True
             return self._start_tf_cluster()
         except Exception:
             self.stop()
@@ -310,10 +324,12 @@ class TFMesosScheduler(Scheduler):
         if update.state != mesos_pb2.TASK_RUNNING:
             task = self.tasks[mesos_task_id]
             if self.started:
-                logger.error("Task failed: %s, %s", task, update.message)
-                _raise(RuntimeError(
-                    'Task %s failed! %s' % (id, update.message)))
+                if update.state != mesos_pb2.TASK_FINISHED:
+                    logger.error("Task failed: %s, %s", task, update.message)
+                    _raise(RuntimeError(
+                        'Task %s failed! %s' % (id, update.message)))
             else:
+                print update.state
                 logger.warn("Task failed: %s, %s", task, update.message)
                 if task.connection:
                     task.connection.close()

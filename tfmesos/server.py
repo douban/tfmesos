@@ -1,11 +1,12 @@
 # coding: utf-8
 
+import os
 import sys
 import socket
 import resource
+import subprocess
 import tensorflow as tf
 from tfmesos.utils import send, recv
-
 
 def main(argv):
     mesos_task_id, maddr = argv[1:]
@@ -30,28 +31,44 @@ def main(argv):
     cpus = response["cpus"]
     mem = response["mem"]
     gpus = response["gpus"]
-
-    server_def = tf.train.ServerDef(
-        cluster=tf.train.ClusterSpec(cluster_def).as_cluster_def(),
-        job_name=job_name,
-        task_index=task_index,
-        protocol="grpc",
-    )
-
-    server_def.default_session_config.device_count["CPU"] = int(cpus)
-    server_def.default_session_config.device_count["GPU"] = int(gpus)
-    (soft, hard) = resource.getrlimit(resource.RLIMIT_AS)
-    soft = min(float(mem), soft, hard)
-    resource.setrlimit(resource.RLIMIT_AS, (soft, hard))
-
-    server = tf.train.Server(server_def)
+    cmd = response["cmd"]
+    cwd = response["cwd"]
+    os.chdir(cwd)
 
     send(c, 'ok')
     c.close()
-    try:
-        server.join()
-    except:
-        return
+    if cmd is None:
+        server_def = tf.train.ServerDef(
+            cluster=tf.train.ClusterSpec(cluster_def).as_cluster_def(),
+            job_name=job_name,
+            task_index=task_index,
+            protocol="grpc",
+        )
+
+        server_def.default_session_config.device_count["CPU"] = int(cpus)
+        server_def.default_session_config.device_count["GPU"] = int(gpus)
+
+        (soft, hard) = resource.getrlimit(resource.RLIMIT_AS)
+        soft = min(float(mem), soft, hard)
+        resource.setrlimit(resource.RLIMIT_AS, (soft, hard))
+
+        server = tf.train.Server(server_def)
+
+        try:
+            server.join()
+        except:
+            return
+    else:
+        server_name = 'ps'
+        worker_name = 'worker'
+        ps_hosts = ','.join(cluster_def[server_name])
+        worker_hosts = ','.join(cluster_def[worker_name])
+
+        cmd = cmd.format(
+            ps_hosts=ps_hosts, worker_hosts=worker_hosts,
+            job_name=job_name, task_index=task_index
+        )
+        subprocess.check_call(cmd, shell=True)
 
 
 if __name__ == '__main__':

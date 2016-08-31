@@ -1,28 +1,37 @@
 import sys
+import argparse
 import tensorflow as tf
 from input_data import read_data_sets
 from tfmesos import cluster
 from threading import Thread, RLock
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-w', '--nworker', type=int, required=True, default=1)
+parser.add_argument('-s', '--nserver', type=int, required=True, default=1)
+parser.add_argument('-Gw', '--worker-gpus', type=int, default=0)
+args, cmd = parser.parse_known_args()
+master = cmd[0] if cmd else None
+nworker = args.nworker
+nserver = args.nserver
 
 jobs_def = [
     {
         "name": "ps",
-        "num": 2
+        "num": nserver
     },
     {
         "name": "worker",
-        "num": 5
+        "num": nworker,
+        "gpus": args.worker_gpus,
     },
 ]
 
 _lock = RLock()
 mnist = read_data_sets("MNIST_data/", one_hot=True)
-master = sys.argv[1]
 with cluster(jobs_def, master=master, quiet=False) as targets:
     graph = tf.Graph()
     with graph.as_default():
-        with tf.device(tf.train.replica_device_setter(ps_tasks=2)):
+        with tf.device(tf.train.replica_device_setter(ps_tasks=nserver)):
             W = tf.Variable(tf.zeros([784, 10]))
             b = tf.Variable(tf.zeros([10]))
             global_step = tf.Variable(0)

@@ -1,6 +1,8 @@
 from contextlib import contextmanager
 from tfmesos.scheduler import Job, TFMesosScheduler
 
+__VERSION__ = '0.0.1'
+
 
 @contextmanager
 def cluster(jobs, master=None, name=None, quiet=False,

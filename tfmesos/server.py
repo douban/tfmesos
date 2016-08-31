@@ -8,6 +8,7 @@ import subprocess
 import tensorflow as tf
 from tfmesos.utils import send, recv
 
+
 def main(argv):
     mesos_task_id, maddr = argv[1:]
     mesos_task_id = int(mesos_task_id)

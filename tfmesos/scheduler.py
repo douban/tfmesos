@@ -1,5 +1,4 @@
 import os
-import re
 import sys
 import math
 import select
@@ -21,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 class Job(object):
 
-    def __init__(self, name, num, cpus=1.0, mem=1024.0, gpus=0, cmd=None, start=0):
+    def __init__(self, name, num, cpus=1.0, mem=1024.0,
+                 gpus=0, cmd=None, start=0):
         self.name = name
         self.num = num
         self.cpus = cpus
@@ -101,7 +101,7 @@ class Task(object):
                 try:
                     docker_args = urllib2.urlopen(url).read()
                     for arg in docker_args.split():
-                        k, v  = arg.split('=')
+                        k, v = arg.split('=')
                         assert k.startswith('--')
                         k = k[2:]
                         p = ti.container.docker.parameters.add()
@@ -169,7 +169,7 @@ class TFMesosScheduler(Scheduler):
         self.master = master or os.environ['MESOS_MASTER']
         self.name = name or '[tensorflow] %s %s' % (
             os.path.abspath(sys.argv[0]), ' '.join(sys.argv[1:]))
-        self.local_task=local_task
+        self.local_task = local_task
         self.task_spec = task_spec
         self.tasks = []
         for job in task_spec:
@@ -246,7 +246,6 @@ class TFMesosScheduler(Scheduler):
             grpc_addr = 'grpc://%s' % task.addr
             targets[target_name] = grpc_addr
             cluster_def.setdefault(task.job_name, []).append(task.addr)
-
 
         if self.local_task:
             job_name, addr = self.local_task

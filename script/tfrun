@@ -48,10 +48,12 @@ jobs_def = [
     ),
 ]
 
+
 def get_addr(targets, name, i):
     prefix_len = len('grpc://')
     url = targets['/job:%s/task:%s' % (name, i)]
     return url[prefix_len:]
+
 
 def get_port():
     s = socket.socket()
@@ -69,8 +71,8 @@ with cluster(jobs_def, master=args.master, local_task=(worker_name, addr)) as ta
         get_addr(targets, server_name, i) for i in xrange(nserver)
     )
     worker_hosts = ','.join(
-        [addr] + \
-        [get_addr(targets,  worker_name, i) for i in xrange(1, nworker)]
+        [addr] +
+        [get_addr(targets, worker_name, i) for i in xrange(1, nworker)]
     )
     cmd = cmd.format(
         ps_hosts=ps_hosts, worker_hosts=worker_hosts,

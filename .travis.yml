@@ -1,0 +1,17 @@
+language: python
+cache:
+    directories:
+        $HOME/.cache/pip
+addons:
+    apt:
+        packages:
+            libzookeeper-mt-dev
+python:
+    - 2.7
+sudo: false
+install:
+    - pip install flake8
+    - pip install -r requirements.txt
+    - pip install .
+script:
+    - flake8 tfmesos script setup.py

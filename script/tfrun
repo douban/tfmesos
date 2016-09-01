@@ -15,13 +15,16 @@ parser.add_argument('-Mw', '--worker-mem', type=float, default=1024.0)
 parser.add_argument('-Cs', '--server-cpus', type=float, default=1.0)
 parser.add_argument('-Gs', '--server-gpus', type=int, default=0)
 parser.add_argument('-Ms', '--server-mem', type=float, default=1024.0)
+parser.add_argument('-v', '--verbose', action='store_true')
+parser.add_argument('-V', '--volume', type=str, action='append')
+parser.add_argument('cmd', type=str)
+parser.add_argument('args', nargs='*')
 
-args, cmd = parser.parse_known_args()
-
-if cmd[0] == '--':
-    cmd = cmd[1:]
-
+args = parser.parse_args()
+cmd = [args.cmd] + args.args
 cmd = ' '.join(cmd)
+
+volumes = dict(v.split(':', 1) for v in args.volume) if args.volume is not None else None
 
 server_name = 'ps'
 nserver = args.nserver
@@ -66,7 +69,8 @@ host = socket.gethostname()
 port = get_port()
 addr = '%s:%s' % (host, port)
 
-with cluster(jobs_def, master=args.master, local_task=(worker_name, addr)) as targets:
+with cluster(jobs_def, master=args.master, quiet=not args.verbose,
+             volumes=volumes, local_task=(worker_name, addr)) as targets:
     ps_hosts = ','.join(
         get_addr(targets, server_name, i) for i in xrange(nserver)
     )

@@ -41,7 +41,7 @@ with cluster(jobs_def, master=master, quiet=False) as targets:
             cross_entropy = -tf.reduce_sum(y_*tf.log(y))
 
             steps = []
-            for i in xrange(5):
+            for i in xrange(nworker):
                 with tf.device('/job:worker/task:%d' % i):
                     steps.append(tf.train.GradientDescentOptimizer(0.005).minimize(cross_entropy, global_step=global_step))
 
@@ -65,7 +65,7 @@ with cluster(jobs_def, master=master, quiet=False) as targets:
 
         with tf.Session(targets['/job:worker/task:0']) as sess:
             sess.run(init_op)
-            threads = [Thread(target=train, args=(i,)) for i in xrange(5)]
+            threads = [Thread(target=train, args=(i,)) for i in xrange(nworker)]
             for t in threads:
                 t.start()
 

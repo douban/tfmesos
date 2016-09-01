@@ -47,8 +47,9 @@ CPU:
                  -u `id -u` \
                  -w /nfs/mnist \
                  tfmesos/tfmesos \
-                 tfrun -w 1 -s 1 -- python mnist_replica.py \
+                 tfrun -w 1 -s 1  \
                  -V /nfs/mnist:/nfs/mnist \
+                 -- python mnist_replica.py \
                  --ps_hosts {ps_hosts} --worker_hosts {worker_hosts} \
                  --job_name {job_name} --worker_index {task_index}
 

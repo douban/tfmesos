@@ -6,7 +6,7 @@ __VERSION__ = '0.0.1'
 
 @contextmanager
 def cluster(jobs, master=None, name=None, quiet=False,
-            local_task=None):
+            volumes={}, local_task=None):
     if isinstance(jobs, dict):
         jobs = [Job(**jobs)]
 
@@ -16,6 +16,6 @@ def cluster(jobs, master=None, name=None, quiet=False,
     jobs = [job if isinstance(job, Job) else Job(**job)
             for job in jobs]
     s = TFMesosScheduler(jobs, master=master, name=name, quiet=quiet,
-                         local_task=local_task)
+                         volumes=volumes, local_task=local_task)
     yield s.start()
     s.stop()

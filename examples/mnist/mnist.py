@@ -6,8 +6,8 @@ from tfmesos import cluster
 from threading import Thread, RLock
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-w', '--nworker', type=int, required=True, default=1)
-parser.add_argument('-s', '--nserver', type=int, required=True, default=1)
+parser.add_argument('-w', '--nworker', type=int, default=1)
+parser.add_argument('-s', '--nserver', type=int, default=1)
 parser.add_argument('-Gw', '--worker-gpus', type=int, default=0)
 args, cmd = parser.parse_known_args()
 master = cmd[0] if cmd else None

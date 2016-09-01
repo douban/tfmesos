@@ -34,7 +34,6 @@ def main(argv):
     gpus = response["gpus"]
     cmd = response["cmd"]
     cwd = response["cwd"]
-    os.chdir(cwd)
 
     send(c, 'ok')
     c.close()
@@ -69,7 +68,7 @@ def main(argv):
             ps_hosts=ps_hosts, worker_hosts=worker_hosts,
             job_name=job_name, task_index=task_index
         )
-        subprocess.check_call(cmd, shell=True)
+        subprocess.check_call(cmd, shell=True, cwd=cwd)
 
 
 if __name__ == '__main__':

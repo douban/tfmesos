@@ -57,7 +57,8 @@ class Task(object):
           addr=%s
         >''' % (self.mesos_task_id, self.addr))
 
-    def to_task_info(self, offer, master_addr, gpu_uuids=[]):
+    def to_task_info(self, offer, master_addr, gpu_uuids=[],
+                     gpu_resource_type=None):
         ti = mesos_pb2.TaskInfo()
         ti.task_id.value = str(self.mesos_task_id)
         ti.slave_id.value = offer.slave_id.value
@@ -90,40 +91,52 @@ class Task(object):
                 v.host_path = src
                 v.mode = mesos_pb2.Volume.RW
 
-            if self.gpus and gpu_uuids:
-                hostname = offer.hostname
-                url = 'http://%s:3476/docker/cli?dev=%s' % (
-                    hostname, urllib2.quote(
-                        ' '.join(gpu_uuids)
+            if self.gpus and gpu_uuids and gpu_resource_type is not None:
+                if gpu_resource_type == mesos_pb2.Value.SET:
+                    hostname = offer.hostname
+                    url = 'http://%s:3476/docker/cli?dev=%s' % (
+                        hostname, urllib2.quote(
+                            ' '.join(gpu_uuids)
+                        )
                     )
-                )
 
-                try:
-                    docker_args = urllib2.urlopen(url).read()
-                    for arg in docker_args.split():
-                        k, v = arg.split('=')
-                        assert k.startswith('--')
-                        k = k[2:]
-                        p = ti.container.docker.parameters.add()
-                        p.key = k
-                        p.value = v
+                    try:
+                        docker_args = urllib2.urlopen(url).read()
+                        for arg in docker_args.split():
+                            k, v = arg.split('=')
+                            assert k.startswith('--')
+                            k = k[2:]
+                            p = ti.container.docker.parameters.add()
+                            p.key = k
+                            p.value = v
 
+                        gpus = ti.resources.add()
+                        gpus.name = 'gpus'
+                        gpus.type = mesos_pb2.Value.SET
+                        gpus.set.item.extend(gpu_uuids)
+                    except Exception:
+                        logger.exception(
+                            'fail to determine remote device parameter,'
+                            ' disable gpu resources'
+                        )
+                else:
+                    gpus = ti.resources.add()
+                    gpus.name = 'gpus'
+                    gpus.type = mesos_pb2.Value.SCALAR
+                    gpus.scalar.value = len(gpu_uuids)
+
+        else:
+            if self.gpus and gpu_uuids and gpu_resource_type is not None:
+                if gpu_resource_type == mesos_pb2.Value.SET:
                     gpus = ti.resources.add()
                     gpus.name = 'gpus'
                     gpus.type = mesos_pb2.Value.SET
                     gpus.set.item.extend(gpu_uuids)
-                except Exception:
-                    logger.exception(
-                        'fail to determine remote device parameter,'
-                        ' disable gpu resources'
-                    )
-
-        else:
-            if self.gpus and gpu_uuids:
-                gpus = ti.resources.add()
-                gpus.name = 'gpus'
-                gpus.type = mesos_pb2.Value.SET
-                gpus.set.item.extend(gpu_uuids)
+                else:
+                    gpus = ti.resources.add()
+                    gpus.name = 'gpus'
+                    gpus.type = mesos_pb2.Value.SCALAR
+                    gpus.scalar.value = len(gpu_uuids)
 
         ti.command.shell = True
         cmd = [
@@ -205,6 +218,7 @@ class TFMesosScheduler(Scheduler):
             offered_cpus = offered_mem = 0.0
             offered_gpus = []
             offered_tasks = []
+            gpu_resource_type = None
 
             for resource in offer.resources:
                 if resource.name == "cpus":
@@ -212,7 +226,12 @@ class TFMesosScheduler(Scheduler):
                 elif resource.name == "mem":
                     offered_mem = resource.scalar.value
                 elif resource.name == "gpus":
-                    offered_gpus = resource.set.item
+                    if resource.type == mesos_pb2.Value.SET:
+                        offered_gpus = resource.set.item
+                    else:
+                        offered_gpus = list(range(resource.scalar.value))
+
+                    gpu_resource_type = resource.type
 
             for task in self.tasks:
                 if task.offered:
@@ -232,8 +251,10 @@ class TFMesosScheduler(Scheduler):
                 task.offered = True
                 offered_tasks.append(
                     task.to_task_info(
-                        offer, self.addr,
-                        gpu_uuids=gpu_uuids))
+                        offer, self.addr, gpu_uuids=gpu_uuids,
+                        gpu_resource_type=gpu_resource_type
+                    )
+                )
 
             driver.launchTasks(offer.id, offered_tasks, mesos_pb2.Filters())
 
@@ -288,6 +309,12 @@ class TFMesosScheduler(Scheduler):
             framework.user = getpass.getuser()
             framework.name = self.name
             framework.hostname = socket.gethostname()
+            if self.version >= (1, 0):
+                capability = framework.capabilities.add()
+                capability.type = getattr(
+                    mesos_pb2.FrameworkInfo.Capability, 'GPU_RESOURCES', 3
+                )
+
             self.driver = MesosSchedulerDriver(self, framework, self.master)
             self.driver.start()
             while any((not task.initalized for task in self.tasks)):
@@ -312,6 +339,8 @@ class TFMesosScheduler(Scheduler):
             lfd.close()
 
     def registered(self, driver, framework_id, master_info):
+        major, minor = master_info.version.split('.', 3)[:2]
+        self.version = (int(major), int(minor))
         logger.info(
             "Tensorflow cluster registered. "
             "( http://%s:%s/#/frameworks/%s )",

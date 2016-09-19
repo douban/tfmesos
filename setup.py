@@ -1,7 +1,6 @@
 import os
 import re
 import glob
-from subprocess import check_output
 from setuptools import setup, find_packages
 
 
@@ -16,18 +15,6 @@ def find_version(*paths):
         raise RuntimeError("Unable to find version string in %s" % (fname,))
 
     version = version_match.group(1)
-
-    try:
-        command = 'git describe --tags'
-        with open(os.devnull, 'w') as fnull:
-            tag = check_output(
-                command.split(),
-                stderr=fnull).decode('utf-8').strip()
-
-        if tag.startswith('v'):
-            assert tag == 'v' + version
-    except Exception:
-        pass
 
     return version
 
@@ -53,7 +40,7 @@ setup(
     ],
     install_requires=[
         'tensorflow>=0.8.0',
-        'pymesos',
+        'pymesos>=0.2.0',
     ],
     scripts=glob.glob(os.path.join('script', '*')),
 )

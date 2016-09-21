@@ -1,9 +1,6 @@
 import struct
 import logging
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+from six.moves import cPickle as pickle
 
 
 def send(fd, o):

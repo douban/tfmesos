@@ -2,13 +2,12 @@ import os
 import sys
 import math
 import select
-import signal
 import socket
-import thread
 import getpass
 import logging
-import urllib2
 import textwrap
+from six import iteritems
+from six.moves import urllib
 from pymesos import Scheduler, MesosSchedulerDriver
 from tfmesos.utils import send, recv, setup_logger
 
@@ -117,7 +116,7 @@ class Task(object):
                     mode='RO'
                 ))
 
-            for src, dst in self.volumes.iteritems():
+            for src, dst in iteritems(self.volumes):
                 volumes.append(dict(
                     host_path=src,
                     container_path=dst,
@@ -128,13 +127,13 @@ class Task(object):
                 if gpu_resource_type == 'SET':
                     hostname = offer['hostname']
                     url = 'http://%s:3476/docker/cli?dev=%s' % (
-                        hostname, urllib2.quote(
+                        hostname, urllib.parse.quote(
                             ' '.join(gpu_uuids)
                         )
                     )
 
                     try:
-                        docker_args = urllib2.urlopen(url).read()
+                        docker_args = urllib.request.urlopen(url).read()
                         for arg in docker_args.split():
                             k, v = arg.split('=')
                             assert k.startswith('--')
@@ -178,30 +177,6 @@ class Task(object):
 
         return ti
 
-_exc_info = None
-
-
-def _raise(e):
-    global _exc_info
-    try:
-        raise e
-    except:
-        _exc_info = sys.exc_info()
-        thread.interrupt_main()
-
-
-def _handle_sigint(signum, frame):
-    global _prev_handler, _exc_info
-    assert signum == signal.SIGINT
-    if _exc_info is not None:
-        raise _exc_info[1], None, _exc_info[2]
-    elif _prev_handler is not None:
-        return _prev_handler(signum, frame)
-
-    raise KeyboardInterrupt
-
-_prev_handler = signal.signal(signal.SIGINT, _handle_sigint)
-
 
 class TFMesosScheduler(Scheduler):
 
@@ -215,7 +190,7 @@ class TFMesosScheduler(Scheduler):
         self.task_spec = task_spec
         self.tasks = []
         for job in task_spec:
-            for task_index in xrange(job.start, job.num):
+            for task_index in range(job.start, job.num):
                 mesos_task_id = len(self.tasks)
                 self.tasks.append(
                     Task(
@@ -377,8 +352,8 @@ class TFMesosScheduler(Scheduler):
                 if update['state'] != 'TASK_FINISHED':
                     logger.error(
                         'Task failed: %s, %s', task, update['message'])
-                    _raise(RuntimeError(
-                        'Task %s failed! %s' % (id, update['message'])))
+                    raise RuntimeError(
+                        'Task %s failed! %s' % (id, update['message']))
             else:
                 logger.warn('Task failed: %s, %s', task, update['message'])
                 if task.connection:
@@ -389,18 +364,18 @@ class TFMesosScheduler(Scheduler):
     def slaveLost(self, driver, agent_id):
         if self.started:
             logger.error('Slave %s lost:', agent_id['value'])
-            _raise(RuntimeError('Slave %s lost' % agent_id['value']))
+            raise RuntimeError('Slave %s lost' % agent_id['value'])
 
     def executorLost(self, driver, executor_id, agent_id, status):
         if self.started:
             logger.error('Executor %s lost: %s', executor_id['value'], status)
-            _raise(RuntimeError('Executor %s@%s lost' % (
+            raise RuntimeError('Executor %s@%s lost' % (
                 executor_id['value'], agent_id['value']
-            )))
+            ))
 
     def error(self, driver, message):
         logger.error('Mesos error: %s', message)
-        _raise(RuntimeError('Error ' + message))
+        raise RuntimeError('Error ' + message)
 
     def stop(self):
         logger.debug('exit')

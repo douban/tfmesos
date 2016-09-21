@@ -39,6 +39,7 @@ setup(
         "Topic :: Software Development :: Libraries"
     ],
     install_requires=[
+        'six',
         'tensorflow>=0.8.0',
         'pymesos>=0.2.0',
     ],

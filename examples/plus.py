@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import sys
+import logging
 import tensorflow as tf
 from tfmesos import cluster
 
@@ -32,4 +33,5 @@ def main(argv):
 
 
 if __name__ == '__main__':
+    logging.basicConfig()
     main(sys.argv)

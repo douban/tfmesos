@@ -232,7 +232,9 @@ class TFMesosScheduler(Scheduler):
                     if resource['type'] == 'SET':
                         offered_gpus = resource['set']['item']
                     else:
-                        offered_gpus = list(range(resource['scalar']['value']))
+                        offered_gpus = list(range(
+                            int(resource['scalar']['value'])
+                        ))
 
                     gpu_resource_type = resource['type']
 

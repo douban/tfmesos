@@ -1,4 +1,5 @@
 # coding: utf-8
+from __future__ import print_function
 
 import sys
 import logging
@@ -29,7 +30,7 @@ def main(argv):
             op = a + b
 
         with tf.Session(targets['/job:worker/task:0']) as sess:
-            print sess.run(op)
+            print(sess.run(op))
 
 
 if __name__ == '__main__':

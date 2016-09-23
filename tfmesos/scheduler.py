@@ -133,19 +133,22 @@ class Task(object):
                     )
 
                     try:
+                        parameters = []
+                        ti['container']['docker']['parameters'] = parameters
                         docker_args = urllib.request.urlopen(url).read()
                         for arg in docker_args.split():
                             k, v = arg.split('=')
                             assert k.startswith('--')
                             k = k[2:]
-                            p = ti.container.docker.parameters.add()
-                            p.key = k
-                            p.value = v
+                            parameters.append(dict(
+                                key=k,
+                                value=v,
+                            ))
 
                         resources.append(dict(
                             name='gpus',
                             type='SET',
-                            set=dict(item=[gpu_uuids])
+                            set=dict(item=gpu_uuids)
                         ))
 
                     except Exception:

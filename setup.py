@@ -40,8 +40,9 @@ setup(
     ],
     install_requires=[
         'six',
+        'addict',
         'tensorflow>=0.8.0',
-        'pymesos>=0.2.0',
+        'pymesos>=0.2.2',
     ],
     scripts=glob.glob(os.path.join('script', '*')),
 )

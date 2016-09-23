@@ -6,6 +6,7 @@ import socket
 import getpass
 import logging
 import textwrap
+from addict import Dict
 from six import iteritems
 from six.moves import urllib
 from pymesos import Scheduler, MesosSchedulerDriver
@@ -20,7 +21,6 @@ class Job(object):
 
     def __init__(self, name, num, cpus=1.0, mem=1024.0,
                  gpus=0, cmd=None, start=0):
-
         self.name = name
         self.num = num
         self.cpus = cpus
@@ -58,74 +58,47 @@ class Task(object):
 
     def to_task_info(self, offer, master_addr, gpu_uuids=[],
                      gpu_resource_type=None):
-        resources = [
-            dict(
-                name='cpus',
-                type='SCALAR',
-                scalar=dict(value=self.cpus),
-            ),
-            dict(
-                name='mem',
-                type='SCALAR',
-                scalar=dict(value=self.mem),
-            )
-        ]
+        ti = Dict()
+        ti.task_id.value = str(self.mesos_task_id)
+        ti.agent_id.value = offer.agent_id.value
+        ti.name = '/job:%s/task:%s' % (self.job_name, self.task_index)
+        ti.resources = resources = []
 
-        cmd = ' '.join([
-            sys.executable, '-m', '%s.server' % __package__,
-            str(self.mesos_task_id), master_addr
-        ])
+        cpus = Dict()
+        resources.append(cpus)
+        cpus.name = 'cpus'
+        cpus.type = 'SCALAR'
+        cpus.scalar.value = self.cpus
 
-        ti = dict(
-            task_id=dict(
-                value=str(self.mesos_task_id)
-            ),
-            agent_id=offer['agent_id'],
-            name='/job:%s/task:%s' % (self.job_name, self.task_index),
-            resources=resources,
-            command=dict(
-                shell=True,
-                value=cmd,
-                environment=dict(
-                    variables=[
-                        dict(
-                            name='PYTHONPATH',
-                            value=':'.join(sys.path)
-                        )
-                    ]
-                )
-            ),
-        )
+        mem = Dict()
+        resources.append(mem)
+        mem.name = 'mem'
+        mem.type = 'SCALAR'
+        mem.scalar.value = self.mem
 
         image = os.environ.get('DOCKER_IMAGE')
 
         if image is not None:
-            volumes = []
-            ti.update(dict(
-                container=dict(
-                    type='DOCKER',
-                    docker=dict(image=image),
-                    volumes=volumes
-                ),
-            ))
+            ti.container.type = 'DOCKER'
+            ti.container.docker.image = image
+            ti.container.volumes = volumes = []
 
             for path in ['/etc/passwd', '/etc/group']:
-                volumes.append(dict(
-                    host_path=path,
-                    container_path=path,
-                    mode='RO'
-                ))
+                v = Dict()
+                volumes.append(v)
+                v.host_path = v.container_path = path
+                v.mode = 'RO'
 
             for src, dst in iteritems(self.volumes):
-                volumes.append(dict(
-                    host_path=src,
-                    container_path=dst,
-                    mode='RW'
-                ))
+                v = Dict()
+                volumes.append(v)
+                v.container_path = dst
+                v.host_path = src
+                v.mode = 'RW'
 
             if self.gpus and gpu_uuids and gpu_resource_type is not None:
                 if gpu_resource_type == 'SET':
-                    hostname = offer['hostname']
+                    hostname = offer.hostname
                     url = 'http://%s:3476/docker/cli?dev=%s' % (
                         hostname, urllib.parse.quote(
                             ' '.join(gpu_uuids)
@@ -133,51 +106,60 @@ class Task(object):
                     )
 
                     try:
-                        parameters = []
-                        ti['container']['docker']['parameters'] = parameters
+                        ti.container.docker.parameters = parameters = []
                         docker_args = urllib.request.urlopen(url).read()
                         for arg in docker_args.split():
                             k, v = arg.split('=')
                             assert k.startswith('--')
                             k = k[2:]
-                            parameters.append(dict(
-                                key=k,
-                                value=v,
-                            ))
+                            p = Dict()
+                            parameters.append(p)
+                            p.key = k
+                            p.value = v
 
-                        resources.append(dict(
-                            name='gpus',
-                            type='SET',
-                            set=dict(item=gpu_uuids)
-                        ))
-
+                        gpus = Dict()
+                        resources.append(gpus)
+                        gpus.name = 'gpus'
+                        gpus.type = 'SET'
+                        gpus.set.item = gpu_uuids
                     except Exception:
                         logger.exception(
                             'fail to determine remote device parameter,'
                             ' disable gpu resources'
                         )
                 else:
-                    resources.append(dict(
-                        name='gpus',
-                        type='SCALAR',
-                        scalar=dict(value=len(gpu_uuids))
-                    ))
+                    gpus = Dict()
+                    resources.append(gpus)
+                    gpus.name = 'gpus'
+                    gpus.type = 'SCALAR'
+                    gpus.scalar.value = len(gpu_uuids)
 
         else:
             if self.gpus and gpu_uuids and gpu_resource_type is not None:
                 if gpu_resource_type == 'SET':
-                    resources.append(dict(
-                        name='gpus',
-                        type='SET',
-                        set=dict(item=[gpu_uuids])
-                    ))
+                    gpus = Dict()
+                    resources.append(gpus)
+                    gpus.name = 'gpus'
+                    gpus.type = 'SET'
+                    gpus.set.item = gpu_uuids
                 else:
-                    resources.append(dict(
-                        name='gpus',
-                        type='SCALAR',
-                        scalar=len(gpu_uuids)
-                    ))
+                    gpus = Dict()
+                    resources.append(gpus)
+                    gpus.name = 'gpus'
+                    gpus.type = 'SCALAR'
+                    gpus.scalar.value = len(gpu_uuids)
 
+        ti.command.shell = True
+        cmd = [
+            sys.executable, '-m', '%s.server' % __package__,
+            str(self.mesos_task_id), master_addr
+        ]
+        ti.command.value = ' '.join(cmd)
+        ti.command.environment.variables = variables = []
+        env = Dict()
+        variables.append(env)
+        env.name = 'PYTHONPATH'
+        env.value = ':'.join(sys.path)
         return ti
 
 
@@ -218,7 +200,7 @@ class TFMesosScheduler(Scheduler):
 
         for offer in offers:
             if all(task.offered for task in self.tasks):
-                driver.declineOffer(offer['id'], dict(refuse_seconds=FOREVER))
+                driver.declineOffer(offer.id, Dict(refuse_seconds=FOREVER))
                 continue
 
             offered_cpus = offered_mem = 0.0
@@ -226,20 +208,18 @@ class TFMesosScheduler(Scheduler):
             offered_tasks = []
             gpu_resource_type = None
 
-            for resource in offer['resources']:
-                if resource['name'] == 'cpus':
-                    offered_cpus = resource['scalar']['value']
-                elif resource['name'] == 'mem':
-                    offered_mem = resource['scalar']['value']
-                elif resource['name'] == 'gpus':
-                    if resource['type'] == 'SET':
-                        offered_gpus = resource['set']['item']
+            for resource in offer.resources:
+                if resource.name == 'cpus':
+                    offered_cpus = resource.scalar.value
+                elif resource.name == 'mem':
+                    offered_mem = resource.scalar.value
+                elif resource.name == 'gpus':
+                    if resource.type == 'SET':
+                        offered_gpus = resource.set.item
                     else:
-                        offered_gpus = list(range(
-                            int(resource['scalar']['value'])
-                        ))
+                        offered_gpus = list(range(resource.scalar.value))
 
-                    gpu_resource_type = resource['type']
+                    gpu_resource_type = resource.type
 
             for task in self.tasks:
                 if task.offered:
@@ -264,7 +244,7 @@ class TFMesosScheduler(Scheduler):
                     )
                 )
 
-            driver.launchTasks(offer['id'], offered_tasks)
+            driver.launchTasks(offer.id, offered_tasks)
 
     def _start_tf_cluster(self):
         cluster_def = {}
@@ -313,13 +293,14 @@ class TFMesosScheduler(Scheduler):
             lfd.bind(('', 0))
             self.addr = '%s:%s' % (socket.gethostname(), lfd.getsockname()[1])
             lfd.listen(10)
-            framework = dict(
-                user=getpass.getuser(),
-                name=self.name,
-                hostname=socket.gethostname()
-            )
+            framework = Dict()
+            framework.user = getpass.getuser()
+            framework.name = self.name
+            framework.hostname = socket.gethostname()
 
-            self.driver = MesosSchedulerDriver(self, framework, self.master)
+            self.driver = MesosSchedulerDriver(
+                self, framework, self.master, use_addict=True
+            )
             self.driver.start()
             while any((not task.initalized for task in self.tasks)):
                 if readable(lfd):
@@ -346,21 +327,21 @@ class TFMesosScheduler(Scheduler):
         logger.info(
             'Tensorflow cluster registered. '
             '( http://%s:%s/#/frameworks/%s )',
-            master_info['hostname'], master_info['port'], framework_id['value']
+            master_info.hostname, master_info.port, framework_id.value
         )
 
     def statusUpdate(self, driver, update):
-        mesos_task_id = int(update['task_id']['value'])
-        if update['state'] != 'TASK_RUNNING':
+        mesos_task_id = int(update.task_id.value)
+        if update.state != 'TASK_RUNNING':
             task = self.tasks[mesos_task_id]
             if self.started:
-                if update['state'] != 'TASK_FINISHED':
-                    logger.error(
-                        'Task failed: %s, %s', task, update['message'])
+                if update.state != 'TASK_FINISHED':
+                    logger.error('Task failed: %s, %s', task, update.message)
                     raise RuntimeError(
-                        'Task %s failed! %s' % (id, update['message']))
+                        'Task %s failed! %s' % (id, update.message)
+                    )
             else:
-                logger.warn('Task failed: %s, %s', task, update['message'])
+                logger.warn('Task failed: %s, %s', task, update.message)
                 if task.connection:
                     task.connection.close()
 
@@ -368,15 +349,13 @@ class TFMesosScheduler(Scheduler):
 
     def slaveLost(self, driver, agent_id):
         if self.started:
-            logger.error('Slave %s lost:', agent_id['value'])
-            raise RuntimeError('Slave %s lost' % agent_id['value'])
+            logger.error('Slave %s lost:', agent_id.value)
+            raise RuntimeError('Slave %s lost' % agent_id)
 
     def executorLost(self, driver, executor_id, agent_id, status):
         if self.started:
-            logger.error('Executor %s lost: %s', executor_id['value'], status)
-            raise RuntimeError('Executor %s@%s lost' % (
-                executor_id['value'], agent_id['value']
-            ))
+            logger.error('Executor %s lost:', executor_id.value)
+            raise RuntimeError('Executor %s@%s lost' % (executor_id, agent_id))
 
     def error(self, driver, message):
         logger.error('Mesos error: %s', message)

@@ -1,27 +1,40 @@
 TFMesos 
 ========
 
-TFMesos is a lightweight framework to help running distributed `Tensorflow <https://www.tensorflow.org>`_ Machine Learning tasks on `Apache Mesos <http://mesos.apache.org>`_ within `Docker <https://www.docker.com>`_ and `Nvidia-Docker <https://github.com/NVIDIA/nvidia-docker/>`_ .
+``TFMesos`` is a lightweight framework to help running distributed `Tensorflow <https://www.tensorflow.org>`_ Machine Learning tasks on `Apache Mesos <http://mesos.apache.org>`_ within `Docker <https://www.docker.com>`_ and `Nvidia-Docker <https://github.com/NVIDIA/nvidia-docker/>`_ .
 
-TFMesos dynamically allocates resources from a Mesos cluster, builds a distributed training cluster for Tensorflow, and makes different training tasks mangeed and isolated in the shared Mesos cluster with the help of Docker.
+``TFMesos`` dynamically allocates resources from a ``Mesos`` cluster, builds a distributed training cluster for ``Tensorflow``, and makes different training tasks mangeed and isolated in the shared ``Mesos`` cluster with the help of ``Docker``.
 
 
 Prerequisites
 --------------
 
-1. Mesos Cluster (cf: `Mesos Getting Started <http://mesos.apache.org/documentation/latest/getting-started>`_). All nodes in the cluster should be reachable using their hostnames, and all nodes have identical `/etc/passwd` and `/etc/group`.
+* For ``Mesos >= 1.0.0``:
 
-2. Docker (cf: `Docker Get Start Tutorial <https://docs.docker.com/engine/installation/linux/>`_)
+  1. ``Mesos`` Cluster (cf: `Mesos Getting Started <http://mesos.apache.org/documentation/latest/getting-started>`_). All nodes in the cluster should be reachable using their hostnames, and all nodes have identical ``/etc/passwd`` and ``/etc/group``.
+  
+  2. Setup ``Mesos Agent`` to enable `Mesos Containerizer <http://mesos.apache.org/documentation/container-image/>`_ and `Mesos Nvidia GPU Support <https://issues.apache.org/jira/browse/MESOS-4626>`_ (optional). eg:
+    ``mesos-agent --containerizers=mesos --image_providers=docker --isolation=filesystem/linux,docker/runtime,cgroups/devices,gpu/nvidia``
+    
+  3. (optional) A Distributed Filesystem (eg: `MooseFS <https://moosefs.com>`_)
+  
+  4. Ensure latest ``TFMesos`` docker image (`tfmesos/tfmesos <https://hub.docker.com/r/tfmesos/tfmesos/>`_) is pulled across the whole cluster
 
-3. Mesos Docker Containerizer Support (cf: `Mesos Docker Containerizer <http://mesos.apache.org/documentation/latest/docker-containerizer/>`_)
+* For ``Mesos < 1.0.0``:
 
-4. (optional) Nvidia-docker installation (cf: `Nvidia-docker installation <https://github.com/NVIDIA/nvidia-docker/wiki/Installation>`_) and make sure nvidia-plugin is accessible from remote host (with ``-l 0.0.0.0:3476``)
+  1. ``Mesos`` Cluster (cf: `Mesos Getting Started <http://mesos.apache.org/documentation/latest/getting-started>`_). All nodes in the cluster should be reachable using their hostnames, and all nodes have identical ``/etc/passwd`` and ``/etc/group``.
 
-5. (optional) A Distributed Filesystem (eg: `MooseFS <https://moosefs.com>`_)
+  2. ``Docker`` (cf: `Docker Get Start Tutorial <https://docs.docker.com/engine/installation/linux/>`_)
 
-6. Ensure latest TFMesos docker image (`tfmesos/tfmesos <https://hub.docker.com/r/tfmesos/tfmesos/>`_) is pulled across the whole cluster
+  3. ``Mesos Docker Containerizer Support`` (cf: `Mesos Docker Containerizer <http://mesos.apache.org/documentation/latest/docker-containerizer/>`_)
 
-If you are using AWS G2 instance, here is a `sample <https://github.com/douban/tfmesos/blob/master/misc/setup-aws-g2.sh>`_ script to setup most of there prerequisites.
+  4. (optional) ``Nvidia-docker`` installation (cf: `Nvidia-docker installation <https://github.com/NVIDIA/nvidia-docker/wiki/Installation>`_) and make sure nvidia-plugin is accessible from remote host (with ``-l 0.0.0.0:3476``)
+
+  5. (optional) A Distributed Filesystem (eg: `MooseFS <https://moosefs.com>`_)
+
+  6. Ensure latest ``TFMesos`` docker image (`tfmesos/tfmesos <https://hub.docker.com/r/tfmesos/tfmesos/>`_) is pulled across the whole cluster
+
+If you are using ``AWS G2`` instance, here is a `sample <https://github.com/douban/tfmesos/blob/master/misc/setup-aws-g2.sh>`_ script to setup most of there prerequisites.
 
 Running in replica mode
 ------------------------

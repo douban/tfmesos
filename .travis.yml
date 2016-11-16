@@ -1,18 +1,27 @@
 language: python
 cache:
     directories:
-        $HOME/.cache/pip
+        "$HOME/.cache/pip"
+python: 3.5
+sudo: false
 addons:
     apt:
         packages:
             libzookeeper-mt-dev
-python:
-    - 2.7
-sudo: false
+env:
+    - TOX_ENV=py27
+    - TOX_ENV=py35
 install:
     - pip install -U pip
-    - pip install flake8
-    - pip install -r requirements.txt
-    - pip install .
+    - pip install tox
 script:
-    - flake8 tfmesos script setup.py
+    - tox -e $TOX_ENV
+deploy:
+    provider: pypi
+    user: windreamer
+    password:
+        secure: GeNVGc2AyY+WyVJX4o3Fu43kcyerzKvoLUx5BpK/KmgStDJggfyG68//AmrVsXFA5JYXzxRKrotaK4AdhzJet3IGhi99Avhp1Ukib58xFxhcO3DmVVAYauN2jyEcEqnQLU8J/0+PHALiVJHJ4NTwB5XDzwOXysWGFDxC0K+I6xlYj0rsqpPTc3Sk0owC3xR4P0nu/aSFqz6M1FpPiNid3dhZRjupYmVE+nFXI8EMA4mD7tMCCXE2+ofmbjA1eIPsrHKlq0cunGzZCV2PnpEu5lSkKtTfO2kbR+T5u7qZm/ID7e7nscigH5h+0w0gp4uP8NCuHKaON9cjemdyUp+l6rcBaw9YeHUI5CJhbb0B/oejvLCCKovszlAa0ibtR9Satb9nl2YSb1mbjnJKEoVgekYE8NlN4AFREhCi1aSUYFdYVJL5v62H7VMfGQU3LsWBnbB/+dnEnHohBEUqAu/IRRVI6otAvjIjeFN31QvkDQh2rrEC7tEFSyuU9RD/cACcVn6JCnr/4vDoF88PNVMx22Zl0yzhnU4PyYqm+jgAw4Ge5C1JI4SH6WShnU7Gg5g3idmcjXwiQ5vkaoAVw9yCCIaOHBQdUbdTj6mguUG5IIFDag1PYGiPlbWYSP0e9e5RUU0qzza+1I4imbO0q32aT/mhKD2QTloWIVGPPJx7nq8=
+    on:
+        tags: true
+        distributions: sdist bdist_wheel
+        repo: douban/tfmesos

@@ -1,6 +1,7 @@
+*.egg-info/
 *.py[co]
 *.swp
-venv/
-*.egg-info/
+.tox/
 build/
 dist/
+venv/

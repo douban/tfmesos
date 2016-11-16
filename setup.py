@@ -23,6 +23,7 @@ def find_readme(*paths):
     with open(os.path.join(*paths)) as f:
         return f.read()
 
+
 setup(
     name='tfmesos',
     version=find_version('tfmesos', '__init__.py'),

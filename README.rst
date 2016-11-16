@@ -19,12 +19,13 @@ Prerequisites
 * For ``Mesos >= 1.0.0``:
 
 1. ``Mesos`` Cluster (cf: `Mesos Getting Started <http://mesos.apache.org/documentation/latest/getting-started>`_). All nodes in the cluster should be reachable using their hostnames, and all nodes have identical ``/etc/passwd`` and ``/etc/group``.
-  
+    
 2. Setup ``Mesos Agent`` to enable `Mesos Containerizer <http://mesos.apache.org/documentation/container-image/>`_ and `Mesos Nvidia GPU Support <https://issues.apache.org/jira/browse/MESOS-4626>`_ (optional). eg: ``mesos-agent --containerizers=mesos --image_providers=docker --isolation=filesystem/linux,docker/runtime,cgroups/devices,gpu/nvidia``
     
 3. (optional) A Distributed Filesystem (eg: `MooseFS <https://moosefs.com>`_)
-  
+    
 4. Ensure latest ``TFMesos`` docker image (`tfmesos/tfmesos <https://hub.docker.com/r/tfmesos/tfmesos/>`_) is pulled across the whole cluster
+
 
 * For ``Mesos < 1.0.0``:
 
@@ -41,6 +42,22 @@ Prerequisites
 6. Ensure latest ``TFMesos`` docker image (`tfmesos/tfmesos <https://hub.docker.com/r/tfmesos/tfmesos/>`_) is pulled across the whole cluster
 
 If you are using ``AWS G2`` instance, here is a `sample <https://github.com/douban/tfmesos/blob/master/misc/setup-aws-g2.sh>`_ script to setup most of there prerequisites.
+
+Running simple Test
+------------------------
+After setting up the mesos and pulling the docker image on a single node (or a cluser), you should be able to use the following command to run a simple test.
+
+sudo docker run \
+    -e MESOS_MASTER=mesos-master:5050 \
+    -e DOCKER_IMAGE=tfmesos/tfmesos \
+    --net=host \
+    -v /path-to-your-tfmesos-code/tfmesos/examples/plus.py:/tmp/plus.py \
+    --rm \
+    -it \
+    tfmesos/tfmesos \
+    python /tmp/plus.py mesos-master:5050
+
+Successfully running the test should result in an output of 42 on the console.
 
 Running in replica mode
 ------------------------

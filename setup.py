@@ -24,14 +24,18 @@ def find_readme(*paths):
         return f.read()
 
 
+version = find_version('tfmesos', '__init__.py')
 setup(
     name='tfmesos',
-    version=find_version('tfmesos', '__init__.py'),
+    version=version,
     packages=find_packages(),
     license='BSD License',
     description="Tensorflow on Mesos",
     author="Zhongbo Tian",
     author_email="tianzhongbo@douban.com",
+    download_url=(
+        'https://github.com/douban/tfmesos/archive/%s.tar.gz' % version
+    ),
     classifiers=[
         "Intended Audience :: Developers",
         "License :: OSI Approved :: BSD License",

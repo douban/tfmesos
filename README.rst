@@ -1,6 +1,13 @@
 TFMesos 
 ========
 
+.. image:: https://img.shields.io/travis/douban/tfmesos.svg
+    :target: https://travis-ci.org/douban/tfmesos/
+.. image:: https://img.shields.io/pypi/v/tfmesos.svg
+    :target: https://pypi.python.org/pypi/tfmesos
+.. image:: https://img.shields.io/docker/automated/tfmesos/tfmesos.svg
+    :target: https://hub.docker.com/r/tfmesos/tfmesos/
+
 ``TFMesos`` is a lightweight framework to help running distributed `Tensorflow <https://www.tensorflow.org>`_ Machine Learning tasks on `Apache Mesos <http://mesos.apache.org>`_ within `Docker <https://www.docker.com>`_ and `Nvidia-Docker <https://github.com/NVIDIA/nvidia-docker/>`_ .
 
 ``TFMesos`` dynamically allocates resources from a ``Mesos`` cluster, builds a distributed training cluster for ``Tensorflow``, and makes different training tasks mangeed and isolated in the shared ``Mesos`` cluster with the help of ``Docker``.

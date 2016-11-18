@@ -31,6 +31,7 @@ setup(
     packages=find_packages(),
     license='BSD License',
     description="Tensorflow on Mesos",
+    long_description=find_readme('README.rst'),
     author="Zhongbo Tian",
     author_email="tianzhongbo@douban.com",
     download_url=(

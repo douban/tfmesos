@@ -18,28 +18,28 @@ Prerequisites
 
 * For ``Mesos >= 1.0.0``:
 
-  1. ``Mesos`` Cluster (cf: `Mesos Getting Started <http://mesos.apache.org/documentation/latest/getting-started>`_). All nodes in the cluster should be reachable using their hostnames, and all nodes have identical ``/etc/passwd`` and ``/etc/group``.
+1. ``Mesos`` Cluster (cf: `Mesos Getting Started <http://mesos.apache.org/documentation/latest/getting-started>`_). All nodes in the cluster should be reachable using their hostnames, and all nodes have identical ``/etc/passwd`` and ``/etc/group``.
   
-  2. Setup ``Mesos Agent`` to enable `Mesos Containerizer <http://mesos.apache.org/documentation/container-image/>`_ and `Mesos Nvidia GPU Support <https://issues.apache.org/jira/browse/MESOS-4626>`_ (optional). eg:
+2. Setup ``Mesos Agent`` to enable `Mesos Containerizer <http://mesos.apache.org/documentation/container-image/>`_ and `Mesos Nvidia GPU Support <https://issues.apache.org/jira/browse/MESOS-4626>`_ (optional). eg:
     ``mesos-agent --containerizers=mesos --image_providers=docker --isolation=filesystem/linux,docker/runtime,cgroups/devices,gpu/nvidia``
     
-  3. (optional) A Distributed Filesystem (eg: `MooseFS <https://moosefs.com>`_)
+3. (optional) A Distributed Filesystem (eg: `MooseFS <https://moosefs.com>`_)
   
-  4. Ensure latest ``TFMesos`` docker image (`tfmesos/tfmesos <https://hub.docker.com/r/tfmesos/tfmesos/>`_) is pulled across the whole cluster
+4. Ensure latest ``TFMesos`` docker image (`tfmesos/tfmesos <https://hub.docker.com/r/tfmesos/tfmesos/>`_) is pulled across the whole cluster
 
 * For ``Mesos < 1.0.0``:
 
-  1. ``Mesos`` Cluster (cf: `Mesos Getting Started <http://mesos.apache.org/documentation/latest/getting-started>`_). All nodes in the cluster should be reachable using their hostnames, and all nodes have identical ``/etc/passwd`` and ``/etc/group``.
+1. ``Mesos`` Cluster (cf: `Mesos Getting Started <http://mesos.apache.org/documentation/latest/getting-started>`_). All nodes in the cluster should be reachable using their hostnames, and all nodes have identical ``/etc/passwd`` and ``/etc/group``.
 
-  2. ``Docker`` (cf: `Docker Get Start Tutorial <https://docs.docker.com/engine/installation/linux/>`_)
+2. ``Docker`` (cf: `Docker Get Start Tutorial <https://docs.docker.com/engine/installation/linux/>`_)
 
-  3. ``Mesos Docker Containerizer Support`` (cf: `Mesos Docker Containerizer <http://mesos.apache.org/documentation/latest/docker-containerizer/>`_)
+3. ``Mesos Docker Containerizer Support`` (cf: `Mesos Docker Containerizer <http://mesos.apache.org/documentation/latest/docker-containerizer/>`_)
 
-  4. (optional) ``Nvidia-docker`` installation (cf: `Nvidia-docker installation <https://github.com/NVIDIA/nvidia-docker/wiki/Installation>`_) and make sure nvidia-plugin is accessible from remote host (with ``-l 0.0.0.0:3476``)
+4. (optional) ``Nvidia-docker`` installation (cf: `Nvidia-docker installation <https://github.com/NVIDIA/nvidia-docker/wiki/Installation>`_) and make sure nvidia-plugin is accessible from remote host (with ``-l 0.0.0.0:3476``)
 
-  5. (optional) A Distributed Filesystem (eg: `MooseFS <https://moosefs.com>`_)
+5. (optional) A Distributed Filesystem (eg: `MooseFS <https://moosefs.com>`_)
 
-  6. Ensure latest ``TFMesos`` docker image (`tfmesos/tfmesos <https://hub.docker.com/r/tfmesos/tfmesos/>`_) is pulled across the whole cluster
+6. Ensure latest ``TFMesos`` docker image (`tfmesos/tfmesos <https://hub.docker.com/r/tfmesos/tfmesos/>`_) is pulled across the whole cluster
 
 If you are using ``AWS G2`` instance, here is a `sample <https://github.com/douban/tfmesos/blob/master/misc/setup-aws-g2.sh>`_ script to setup most of there prerequisites.
 
@@ -47,9 +47,9 @@ Running in replica mode
 ------------------------
 This mode is called `Between-graph replication` in official `Distributed Tensorflow Howto <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/g3doc/how_tos/distributed/index.md#replicated-training>`_
 
-Most distributed training models that Google has open sourced (such as `mnist_replica (https://github.com/tensorflow/tensorflow/blob/master/tensorflow/tools/dist_test/python/mnist_replica.py`_) and `inception <https://github.com/tensorflow/models/blob/master/inception/inception/inception_distributed_train.py>`_) are using this mode. In this mode, two kind of Jobs are defined with the names `'ps'` and `'wocker'`. `'ps'` tasks act as `'Parameter Server'` and `'worker'` tasks run the actual training process.
+Most distributed training models that Google has open sourced (such as `mnist_replica <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/tools/dist_test/python/mnist_replica.py>`_ and `inception <https://github.com/tensorflow/models/blob/master/inception/inception/inception_distributed_train.py>`_) are using this mode. In this mode, two kind of Jobs are defined with the names `'ps'` and `'wocker'`. `'ps'` tasks act as `'Parameter Server'` and `'worker'` tasks run the actual training process.
 
-Here we use our modified `mnist_replica <https://github.com/douban/tfmesos/blob/master/examples/mnist/mnist_replica.py>`_ as example:
+Here we use our modified `'mnist_replica' <https://github.com/douban/tfmesos/blob/master/examples/mnist/mnist_replica.py>`_ as example:
 
 1. Checkout the `mnist` example codes into a directory in shared filesystem, eg: `/nfs/mnist`
 2. Assume Mesos master is `mesos-master:5050`

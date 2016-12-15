@@ -57,7 +57,7 @@ class Task(object):
         >''' % (self.mesos_task_id, self.addr))
 
     def to_task_info(self, offer, master_addr, gpu_uuids=[],
-                     gpu_resource_type=None):
+                     gpu_resource_type=None, containerizer_type='MESOS'):
         ti = Dict()
         ti.task_id.value = str(self.mesos_task_id)
         ti.agent_id.value = offer.agent_id.value
@@ -79,8 +79,51 @@ class Task(object):
         image = os.environ.get('DOCKER_IMAGE')
 
         if image is not None:
-            ti.container.type = 'DOCKER'
-            ti.container.docker.image = image
+            if containerizer_type == 'DOCKER':
+                ti.container.type = 'DOCKER'
+                ti.container.docker.image = image
+
+                ti.container.docker.parameters = parameters = []
+                p = Dict()
+                p.key = 'memory-swap'
+                p.value = '-1'
+                parameters.append(p)
+
+                if self.gpus and gpu_uuids:
+                    hostname = offer.hostname
+                    url = 'http://%s:3476/docker/cli?dev=%s' % (
+                        hostname, urllib.parse.quote(
+                            ' '.join(gpu_uuids)
+                        )
+                    )
+
+                    try:
+                        docker_args = urllib.request.urlopen(url).read()
+                        for arg in docker_args.split():
+                            k, v = arg.split('=')
+                            assert k.startswith('--')
+                            k = k[2:]
+                            p = Dict()
+                            parameters.append(p)
+                            p.key = k
+                            p.value = v
+                    except Exception:
+                        logger.exception(
+                            'fail to determine remote device parameter,'
+                            ' disable gpu resources'
+                        )
+                        gpu_uuids = []
+
+            elif containerizer_type == 'MESOS':
+                ti.container.type = 'MESOS'
+                ti.container.mesos.image.type = 'DOCKER'
+                ti.container.mesos.image.docker.name = image
+
+            else:
+                assert False, (
+                    'Unsupported containerizer: %s' % containerizer_type
+                )
+
             ti.container.volumes = volumes = []
 
             for path in ['/etc/passwd', '/etc/group']:
@@ -96,58 +139,19 @@ class Task(object):
                 v.host_path = src
                 v.mode = 'RW'
 
-            if self.gpus and gpu_uuids and gpu_resource_type is not None:
-                if gpu_resource_type == 'SET':
-                    hostname = offer.hostname
-                    url = 'http://%s:3476/docker/cli?dev=%s' % (
-                        hostname, urllib.parse.quote(
-                            ' '.join(gpu_uuids)
-                        )
-                    )
-
-                    try:
-                        ti.container.docker.parameters = parameters = []
-                        docker_args = urllib.request.urlopen(url).read()
-                        for arg in docker_args.split():
-                            k, v = arg.split('=')
-                            assert k.startswith('--')
-                            k = k[2:]
-                            p = Dict()
-                            parameters.append(p)
-                            p.key = k
-                            p.value = v
-
-                        gpus = Dict()
-                        resources.append(gpus)
-                        gpus.name = 'gpus'
-                        gpus.type = 'SET'
-                        gpus.set.item = gpu_uuids
-                    except Exception:
-                        logger.exception(
-                            'fail to determine remote device parameter,'
-                            ' disable gpu resources'
-                        )
-                else:
-                    gpus = Dict()
-                    resources.append(gpus)
-                    gpus.name = 'gpus'
-                    gpus.type = 'SCALAR'
-                    gpus.scalar.value = len(gpu_uuids)
-
-        else:
-            if self.gpus and gpu_uuids and gpu_resource_type is not None:
-                if gpu_resource_type == 'SET':
-                    gpus = Dict()
-                    resources.append(gpus)
-                    gpus.name = 'gpus'
-                    gpus.type = 'SET'
-                    gpus.set.item = gpu_uuids
-                else:
-                    gpus = Dict()
-                    resources.append(gpus)
-                    gpus.name = 'gpus'
-                    gpus.type = 'SCALAR'
-                    gpus.scalar.value = len(gpu_uuids)
+        if self.gpus and gpu_uuids and gpu_resource_type is not None:
+            if gpu_resource_type == 'SET':
+                gpus = Dict()
+                resources.append(gpus)
+                gpus.name = 'gpus'
+                gpus.type = 'SET'
+                gpus.set.item = gpu_uuids
+            else:
+                gpus = Dict()
+                resources.append(gpus)
+                gpus.name = 'gpus'
+                gpus.type = 'SCALAR'
+                gpus.scalar.value = len(gpu_uuids)
 
         ti.command.shell = True
         cmd = [
@@ -166,13 +170,14 @@ class Task(object):
 class TFMesosScheduler(Scheduler):
 
     def __init__(self, task_spec, master=None, name=None, quiet=False,
-                 volumes={}, local_task=None):
+                 volumes={}, local_task=None, containerizer_type=None):
         self.started = False
         self.master = master or os.environ['MESOS_MASTER']
         self.name = name or '[tensorflow] %s %s' % (
             os.path.abspath(sys.argv[0]), ' '.join(sys.argv[1:]))
         self.local_task = local_task
         self.task_spec = task_spec
+        self.containerizer_type = containerizer_type
         self.tasks = []
         for job in task_spec:
             for task_index in range(job.start, job.num):
@@ -240,7 +245,8 @@ class TFMesosScheduler(Scheduler):
                 offered_tasks.append(
                     task.to_task_info(
                         offer, self.addr, gpu_uuids=gpu_uuids,
-                        gpu_resource_type=gpu_resource_type
+                        gpu_resource_type=gpu_resource_type,
+                        containerizer_type=self.containerizer_type
                     )
                 )
 
@@ -329,6 +335,11 @@ class TFMesosScheduler(Scheduler):
             '( http://%s:%s/#/frameworks/%s )',
             master_info.hostname, master_info.port, framework_id.value
         )
+
+        if self.containerizer_type is None:
+            self.containerizer_type = (
+                'MESOS' if driver.version >= (1, 0, 0) else 'DOCKER'
+            )
 
     def statusUpdate(self, driver, update):
         mesos_task_id = int(update.task_id.value)

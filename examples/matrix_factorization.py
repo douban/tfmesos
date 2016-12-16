@@ -1,9 +1,10 @@
 # coding: utf-8
-
+from __future__ import print_function
 import sys
 import numpy as np
 import tensorflow as tf
 from tfmesos import cluster
+
 
 
 INFINITY = 10e+12
@@ -70,11 +71,11 @@ def main(argv):
             nmf = NMF(session, matrix, 200)
             for i in range(max_iter):
                 mat_w, mat_h, loss = nmf.run()
-                print "loss#%d: %s" % (i, loss)
+                print("loss#%d: %s" % (i, loss))
 
     err = np.power(matrix - np.matmul(mat_w, mat_h), 2)
-    print "err mean: %s" % err.mean()
-    print "loss: %s" % loss
+    print("err mean: %s" % err.mean())
+    print("loss: %s" % loss)
 
 
 if __name__ == '__main__':

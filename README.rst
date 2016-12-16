@@ -47,9 +47,10 @@ If you are using ``AWS G2`` instance, here is a `sample <https://github.com/doub
 Running simple Test
 ------------------------
 After setting up the mesos and pulling the docker image on a single node (or a cluser), you should be able to use the following command to run a simple test.
+
 .. code:: bash
 
-    $ docker run --rm -it -e MESOS_MASTER=mesos-master:5050 \
+    $ docker run -e MESOS_MASTER=mesos-master:5050 \
         -e DOCKER_IMAGE=tfmesos/tfmesos \
         --net=host \
         -v /path-to-your-tfmesos-code/tfmesos/examples/plus.py:/tmp/plus.py \

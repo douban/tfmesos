@@ -48,15 +48,16 @@ Running simple Test
 ------------------------
 After setting up the mesos and pulling the docker image on a single node (or a cluser), you should be able to use the following command to run a simple test.
 
-sudo docker run \
-    -e MESOS_MASTER=mesos-master:5050 \
-    -e DOCKER_IMAGE=tfmesos/tfmesos \
-    --net=host \
-    -v /path-to-your-tfmesos-code/tfmesos/examples/plus.py:/tmp/plus.py \
-    --rm \
-    -it \
-    tfmesos/tfmesos \
-    python /tmp/plus.py mesos-master:5050
+.. code:: bash
+    $sudo docker run \
+        -e MESOS_MASTER=mesos-master:5050 \
+        -e DOCKER_IMAGE=tfmesos/tfmesos \
+        --net=host \
+        -v /path-to-your-tfmesos-code/tfmesos/examples/plus.py:/tmp/plus.py \
+        --rm \
+        -it \
+        tfmesos/tfmesos \
+        python /tmp/plus.py mesos-master:5050
 
 Successfully running the test should result in an output of 42 on the console.
 

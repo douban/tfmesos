@@ -338,7 +338,7 @@ class TFMesosScheduler(Scheduler):
 
         if self.containerizer_type is None:
             self.containerizer_type = (
-                'MESOS' if driver.version >= (1, 0, 0) else 'DOCKER'
+                'MESOS' if [int(x) for x in driver.version.split(".")] >= (1, 0, 0) else 'DOCKER'
             )
 
     def statusUpdate(self, driver, update):

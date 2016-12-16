@@ -18,14 +18,14 @@ Prerequisites
 
 * For ``Mesos >= 1.0.0``:
 
-  1. ``Mesos`` Cluster (cf: `Mesos Getting Started <http://mesos.apache.org/documentation/latest/getting-started>`_). All nodes in the cluster should be reachable using their hostnames, and all nodes have identical ``/etc/passwd`` and ``/etc/group``.
+1. ``Mesos`` Cluster (cf: `Mesos Getting Started <http://mesos.apache.org/documentation/latest/getting-started>`_). All nodes in the cluster should be reachable using their hostnames, and all nodes have identical ``/etc/passwd`` and ``/etc/group``.
 
-  2. Setup ``Mesos Agent`` to enable `Mesos Containerizer <http://mesos.apache.org/documentation/container-image/>`_ and `Mesos Nvidia GPU Support <https://issues.apache.org/jira/browse/MESOS-4626>`_ (optional). eg:
+2. Setup ``Mesos Agent`` to enable `Mesos Containerizer <http://mesos.apache.org/documentation/container-image/>`_ and `Mesos Nvidia GPU Support <https://issues.apache.org/jira/browse/MESOS-4626>`_ (optional). eg:
     ``mesos-agent --containerizers=mesos --image_providers=docker --isolation=filesystem/linux,docker/runtime,cgroups/devices,gpu/nvidia``
 
-  3. (optional) A Distributed Filesystem (eg: `MooseFS <https://moosefs.com>`_)
+3. (optional) A Distributed Filesystem (eg: `MooseFS <https://moosefs.com>`_)
 
-  4. Ensure latest ``TFMesos`` docker image (`tfmesos/tfmesos <https://hub.docker.com/r/tfmesos/tfmesos/>`_) is pulled across the whole cluster
+4. Ensure latest ``TFMesos`` docker image (`tfmesos/tfmesos <https://hub.docker.com/r/tfmesos/tfmesos/>`_) is pulled across the whole cluster
 
 
 * For ``Mesos < 1.0.0``:

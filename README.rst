@@ -42,6 +42,25 @@ Prerequisites
 
 If you are using ``AWS G2`` instance, here is a `sample <https://github.com/douban/tfmesos/blob/master/misc/setup-aws-g2.sh>`_ script to setup most of there prerequisites.
 
+
+Running simple Test
+------------------------
+After setting up the mesos and pulling the docker image on a single node (or a cluser), you should be able to use the following command to run a simple test.
+
+.. code:: bash
+
+    $ docker run -e MESOS_MASTER=mesos-master:5050 \
+        -e DOCKER_IMAGE=tfmesos/tfmesos \
+        --net=host \
+        -v /path-to-your-tfmesos-code/tfmesos/examples/plus.py:/tmp/plus.py \
+        --rm \
+        -it \
+        tfmesos/tfmesos \
+        python /tmp/plus.py mesos-master:5050
+
+Successfully running the test should result in an output of 42 on the console.
+
+
 Running in replica mode
 ------------------------
 This mode is called `Between-graph replication` in official `Distributed Tensorflow Howto <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/g3doc/how_tos/distributed/index.md#replicated-training>`_

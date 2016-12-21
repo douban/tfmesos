@@ -1,9 +1,11 @@
-addict==1.0.0
+addict==2.0.0
+funcsigs==1.0.2
 http-parser==0.8.3
-numpy==1.11.1
-protobuf==3.0.0b2
-pymesos==0.2.7
+mock==2.0.0
+numpy==1.11.3
+pbr==1.10.0
+protobuf==3.1.0
+pymesos==0.2.9
 six==1.10.0
+tensorflow-gpu==0.12.0
 zkpython==0.4.2
-https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow-0.9.0-cp27-none-linux_x86_64.whl; python_version == '2.7'
-https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow-0.9.0-cp35-cp35m-linux_x86_64.whl; python_version == '3.5'

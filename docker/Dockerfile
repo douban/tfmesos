@@ -1,5 +1,6 @@
 FROM nvidia/cuda:8.0-cudnn5-runtime
-RUN ln -s /usr/lib/x86_64-linux-gnu/libcudnn.so.5 /usr/lib/x86_64-linux-gnu/libcudnn.so
+RUN ln -sf /usr/local/cuda/lib64/libcudnn.so.5 /usr/local/cuda/lib64/libcudnn.so \
+    ldconfig
 RUN echo '\
     deb http://archive.ubuntu.com/ubuntu/ trusty main\n\
     deb http://archive.ubuntu.com/ubuntu/ trusty universe\n\

@@ -48,7 +48,11 @@ with cluster(jobs_def, master=master, quiet=False) as targets:
             correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-            init_op = tf.global_variables_initializer()
+            version = tuple(map(int, (tf.__version__.split("."))))
+            if version < (0, 12, 0):
+                init_op = tf.initialize_all_variables()
+            else:
+                init_op = tf.global_variables_initializer()
 
             coord = tf.train.Coordinator()
 

@@ -44,6 +44,7 @@ import time
 
 import tensorflow as tf
 import input_data
+from tensorflow.contrib.learn.python.learn.datasets.mnist import read_data_sets
 
 
 flags = tf.app.flags
@@ -94,7 +95,7 @@ def main(unused_argv):
     server.join()
     sys.exit(0)
     
-  mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
+  mnist = read_data_sets(FLAGS.data_dir, one_hot=True)
   if FLAGS.download_only:
     sys.exit(0)
 

@@ -1,7 +1,6 @@
-import sys
 import argparse
 import tensorflow as tf
-from input_data import read_data_sets
+from tensorflow.contrib.learn.python.learn.datasets.mnist import read_data_sets
 from tfmesos import cluster
 from threading import Thread, RLock
 
@@ -9,10 +8,18 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-w', '--nworker', type=int, default=1)
 parser.add_argument('-s', '--nserver', type=int, default=1)
 parser.add_argument('-Gw', '--worker-gpus', type=int, default=0)
+parser.add_argument('-C', '--containerizer_type', type=str, default=None)
 args, cmd = parser.parse_known_args()
 master = cmd[0] if cmd else None
 nworker = args.nworker
 nserver = args.nserver
+
+extra_kw = {}
+if args.containerizer_type:
+    containerizer_type = args.containerizer_type.upper()
+    assert containerizer_type in ['MESOS', 'DOCKER']
+    extra_kw['containerizer_type'] = containerizer_type
+
 
 jobs_def = [
     {
@@ -28,7 +35,7 @@ jobs_def = [
 
 _lock = RLock()
 mnist = read_data_sets("MNIST_data/", one_hot=True)
-with cluster(jobs_def, master=master, quiet=False) as targets:
+with cluster(jobs_def, master=master, quiet=False, **extra_kw) as targets:
     graph = tf.Graph()
     with graph.as_default():
         with tf.device(tf.train.replica_device_setter(ps_tasks=nserver)):

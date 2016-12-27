@@ -10,6 +10,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-w', '--nworker', type=int, required=True)
 parser.add_argument('-s', '--nserver', type=int, required=True)
 parser.add_argument('-m', '--master', type=str)
+parser.add_argument('-C', '--containerizer_type', type=str, default=None)
 parser.add_argument('-Cw', '--worker-cpus', type=float, default=1.0)
 parser.add_argument('-Gw', '--worker-gpus', type=int, default=0)
 parser.add_argument('-Mw', '--worker-mem', type=float, default=1024.0)
@@ -25,12 +26,19 @@ args = parser.parse_args()
 cmd = [args.cmd] + args.args
 cmd = ' '.join(cmd)
 
-volumes = dict(v.split(':', 1) for v in args.volume) if args.volume is not None else None
+volumes = (dict(v.split(':', 1) for v in args.volume)
+           if args.volume is not None else None)
 
 server_name = 'ps'
 nserver = args.nserver
 worker_name = 'worker'
 nworker = args.nworker
+
+extra_kw = {}
+if args.containerizer_type:
+    containerizer_type = args.containerizer_type.upper()
+    assert containerizer_type in ['MESOS', 'DOCKER']
+    extra_kw['containerizer_type'] = containerizer_type
 
 jobs_def = [
     dict(
@@ -71,7 +79,8 @@ port = get_port()
 addr = '%s:%s' % (host, port)
 
 with cluster(jobs_def, master=args.master, quiet=not args.verbose,
-             volumes=volumes, local_task=(worker_name, addr)) as targets:
+             volumes=volumes, local_task=(worker_name, addr),
+             **extra_kw) as targets:
     ps_hosts = ','.join(
         get_addr(targets, server_name, i) for i in xrange(nserver)
     )

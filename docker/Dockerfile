@@ -1,11 +1,6 @@
 FROM nvidia/cuda:8.0-cudnn5-runtime
 RUN ln -sf /usr/local/cuda/lib64/libcudnn.so.5 /usr/local/cuda/lib64/libcudnn.so && \
     ldconfig
-RUN echo '\
-    deb http://archive.ubuntu.com/ubuntu/ trusty main\n\
-    deb http://archive.ubuntu.com/ubuntu/ trusty universe\n\
-    deb http://archive.ubuntu.com/ubuntu/ trusty-updates main\n'\
-    > /etc/apt/sources.list
 RUN apt-get update && apt-get install --no-install-recommends -y \
         gcc \
         libopenblas-base \

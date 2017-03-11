@@ -12,6 +12,6 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     apt-get clean && \
     rm -rf /var/cache/apt /var/lib/apt/lists
 RUN python -c 'import urllib2;exec(urllib2.urlopen("https://bootstrap.pypa.io/get-pip.py").read())' --no-cache-dir --timeout 1000 && \
-    pip install --no-cache-dir --timeout 1000 -r "https://raw.githubusercontent.com/douban/tfmesos/master/requirements.txt" && \
-    pip install --no-cache-dir --timeout 1000 "git+https://github.com/douban/tfmesos.git@master#egg=tfmesos"
-ENV DOCKER_IMAGE tfmesos/tfmesos
+    pip install --no-cache-dir --timeout 1000 -r "https://raw.githubusercontent.com/klueska-mesosphere/tfmesos/master/requirements.txt" && \
+    pip install --no-cache-dir --timeout 1000 "git+https://github.com/klueska-mesosphere/tfmesos.git@master#egg=tfmesos"
+ENV DOCKER_IMAGE klueska/tfmesos

@@ -205,6 +205,7 @@ class TFMesosScheduler(Scheduler):
 
         for offer in offers:
             if all(task.offered for task in self.tasks):
+                self.driver.suppressOffers()
                 driver.declineOffer(offer.id, Dict(refuse_seconds=FOREVER))
                 continue
 

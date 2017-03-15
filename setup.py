@@ -48,7 +48,7 @@ setup(
     install_requires=[
         'six',
         'addict',
-        'pymesos>=0.2.2',
+        'pymesos>=0.2.10',
     ],
     extras_require={
         'cpu': ['tensorflow>=0.8.0'],

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import socket
+import logging
 import argparse
 import subprocess
 
@@ -77,6 +78,10 @@ def get_port():
 host = socket.gethostname()
 port = get_port()
 addr = '%s:%s' % (host, port)
+logging.basicConfig(
+    format='[tfrun] %(threadName)s %(asctime)-15s %(message)s',
+    level=args.verbose and logging.DEBUG or logging.INFO,
+)
 
 with cluster(jobs_def, master=args.master, quiet=not args.verbose,
              volumes=volumes, local_task=(worker_name, addr),

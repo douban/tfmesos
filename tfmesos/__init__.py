@@ -18,5 +18,7 @@ def cluster(jobs, master=None, name=None, quiet=False,
     s = TFMesosScheduler(jobs, master=master, name=name, quiet=quiet,
                          volumes=volumes, local_task=local_task,
                          containerizer_type=containerizer_type)
-    yield s.start()
-    s.stop()
+    try:
+        yield s.start()
+    finally:
+        s.stop()

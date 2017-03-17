@@ -16,7 +16,7 @@ def main(argv):
     lfd = socket.socket()
     lfd.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     lfd.bind(('', 0))
-    addr = "%s:%s" % (socket.gethostname(), lfd.getsockname()[1])
+    addr = "%s:%s" % (lfd.getsockname()[0], lfd.getsockname()[1])
     job_name = None
     task_index = None
     mem = None

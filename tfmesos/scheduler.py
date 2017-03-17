@@ -297,7 +297,7 @@ class TFMesosScheduler(Scheduler):
         lfd = socket.socket()
         try:
             lfd.bind(('', 0))
-            self.addr = '%s:%s' % (socket.gethostname(), lfd.getsockname()[1])
+            self.addr = '%s:%s' % (lfd.getsockname()[0], lfd.getsockname()[1])
             lfd.listen(10)
             framework = Dict()
             framework.user = getpass.getuser()

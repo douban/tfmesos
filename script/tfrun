@@ -28,7 +28,7 @@ cmd = [args.cmd] + args.args
 cmd = ' '.join(cmd)
 
 volumes = (dict(v.split(':', 1) for v in args.volume)
-           if args.volume is not None else None)
+           if args.volume is not None else {})
 
 server_name = 'ps'
 nserver = args.nserver

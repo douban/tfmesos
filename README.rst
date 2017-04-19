@@ -1,6 +1,10 @@
 TFMesos 
 ========
 
+.. image:: https://badges.gitter.im/douban/tfmesos.svg
+   :alt: Join the chat at https://gitter.im/douban/tfmesos
+   :target: https://gitter.im/douban/tfmesos?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+
 .. image:: https://img.shields.io/travis/douban/tfmesos.svg
     :target: https://travis-ci.org/douban/tfmesos/
 .. image:: https://img.shields.io/pypi/v/tfmesos.svg

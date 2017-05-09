@@ -19,7 +19,7 @@ def main(argv):
         },
     ]
     mesos_master = sys.argv[1]
-    with cluster(jobs_def, master=mesos_master, quiet=False) as targets:
+    with cluster(jobs_def, master=mesos_master, quiet=False) as c:
         with tf.device('/job:ps/task:0'):
             a = tf.constant(10)
 
@@ -29,7 +29,7 @@ def main(argv):
         with tf.device("/job:worker/task:1"):
             op = a + b
 
-        with tf.Session(targets['/job:worker/task:0']) as sess:
+        with tf.Session(c.targets['/job:worker/task:0']) as sess:
             print(sess.run(op))
 
 

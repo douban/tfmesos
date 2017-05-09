@@ -5,8 +5,7 @@ __VERSION__ = '0.0.3'
 
 
 @contextmanager
-def cluster(jobs, master=None, name=None, quiet=False,
-            volumes={}, local_task=None, containerizer_type=None):
+def cluster(jobs, **kw):
     if isinstance(jobs, dict):
         jobs = [Job(**jobs)]
 
@@ -15,10 +14,9 @@ def cluster(jobs, master=None, name=None, quiet=False,
 
     jobs = [job if isinstance(job, Job) else Job(**job)
             for job in jobs]
-    s = TFMesosScheduler(jobs, master=master, name=name, quiet=quiet,
-                         volumes=volumes, local_task=local_task,
-                         containerizer_type=containerizer_type)
+    s = TFMesosScheduler(jobs, **kw)
     try:
-        yield s.start()
+        s.start()
+        yield s
     finally:
         s.stop()

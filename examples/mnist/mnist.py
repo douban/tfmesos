@@ -8,7 +8,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-w', '--nworker', type=int, default=1)
 parser.add_argument('-s', '--nserver', type=int, default=1)
 parser.add_argument('-Gw', '--worker-gpus', type=int, default=0)
-parser.add_argument('-C', '--containerizer_type', type=str, default=None)
+parser.add_argument('-C', '--containerizer_type', choices=["MESOS", "DOCKER"], type=lambda s: s.upper(), nargs='?')
+parser.add_argument('-P', '--protocol', type=str)
 args, cmd = parser.parse_known_args()
 master = cmd[0] if cmd else None
 nworker = args.nworker
@@ -16,9 +17,10 @@ nserver = args.nserver
 
 extra_kw = {}
 if args.containerizer_type:
-    containerizer_type = args.containerizer_type.upper()
-    assert containerizer_type in ['MESOS', 'DOCKER']
-    extra_kw['containerizer_type'] = containerizer_type
+    extra_kw['containerizer_type'] = args.containerizer_type
+
+if args.protocol:
+    extra_kw['protocol'] = args.protocol
 
 
 jobs_def = [

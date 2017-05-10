@@ -35,7 +35,7 @@ def main(argv):
 
     forward_fd = None
     grpc_addr = '/job:%s/task:%s' % (job_name, task_index)
-    if grpc_addr in forward_addresses:
+    if forward_addresses and grpc_addr in forward_addresses:
         addr = forward_addresses[grpc_addr]
         forward_fd = socket.socket()
         forward_fd.connect(addr)

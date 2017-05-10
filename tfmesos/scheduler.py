@@ -170,16 +170,20 @@ class Task(object):
 class TFMesosScheduler(Scheduler):
 
     def __init__(self, task_spec, master=None, name=None, quiet=False,
-                 volumes={}, local_task=None, containerizer_type=None):
+                 volumes={}, containerizer_type=None,
+                 forward_addresses=None, protocol='grpc'):
         self.started = False
         self.master = master or os.environ['MESOS_MASTER']
         self.name = name or '[tensorflow] %s %s' % (
             os.path.abspath(sys.argv[0]), ' '.join(sys.argv[1:]))
-        self.local_task = local_task
         self.task_spec = task_spec
         self.containerizer_type = containerizer_type
+        self.protocol = protocol
+        self.forward_addresses = forward_addresses
         self.tasks = []
+        self.job_finished = {}
         for job in task_spec:
+            self.job_finished[job.name] = 0
             for task_index in range(job.start, job.num):
                 mesos_task_id = len(self.tasks)
                 self.tasks.append(
@@ -253,19 +257,20 @@ class TFMesosScheduler(Scheduler):
 
             driver.launchTasks(offer.id, offered_tasks)
 
-    def _start_tf_cluster(self):
-        cluster_def = {}
-
+    @property
+    def targets(self):
         targets = {}
         for task in self.tasks:
             target_name = '/job:%s/task:%s' % (task.job_name, task.task_index)
             grpc_addr = 'grpc://%s' % task.addr
             targets[target_name] = grpc_addr
-            cluster_def.setdefault(task.job_name, []).append(task.addr)
+        return targets
 
-        if self.local_task:
-            job_name, addr = self.local_task
-            cluster_def.setdefault(job_name, []).insert(0, addr)
+    def _start_tf_cluster(self):
+        cluster_def = {}
+
+        for task in self.tasks:
+            cluster_def.setdefault(task.job_name, []).append(task.addr)
 
         for task in self.tasks:
             response = {
@@ -277,6 +282,8 @@ class TFMesosScheduler(Scheduler):
                 'cmd': task.cmd,
                 'cwd': os.getcwd(),
                 'cluster_def': cluster_def,
+                'forward_addresses': self.forward_addresses,
+                'protocol': self.protocol
             }
             send(task.connection, response)
             assert recv(task.connection) == 'ok'
@@ -288,7 +295,6 @@ class TFMesosScheduler(Scheduler):
 
             )
             task.connection.close()
-        return targets
 
     def start(self):
 
@@ -323,7 +329,7 @@ class TFMesosScheduler(Scheduler):
                         c.close()
 
             self.started = True
-            return self._start_tf_cluster()
+            self._start_tf_cluster()
         except Exception:
             self.stop()
             raise
@@ -351,8 +357,10 @@ class TFMesosScheduler(Scheduler):
                 if update.state != 'TASK_FINISHED':
                     logger.error('Task failed: %s, %s', task, update.message)
                     raise RuntimeError(
-                        'Task %s failed! %s' % (id, update.message)
+                        'Task %s failed! %s' % (task, update.message)
                     )
+                else:
+                    self.job_finished[task.job_name] += 1
             else:
                 logger.warn('Task failed: %s, %s', task, update.message)
                 if task.connection:
@@ -386,4 +394,10 @@ class TFMesosScheduler(Scheduler):
 
         if hasattr(self, 'driver'):
             self.driver.stop()
+            self.driver.join()
             del self.driver
+
+    def finished(self):
+        return any(
+            self.job_finished[job.name] >= job.num for job in self.task_spec
+        )

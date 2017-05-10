@@ -35,7 +35,7 @@ jobs_def = [
 
 _lock = RLock()
 mnist = read_data_sets("MNIST_data/", one_hot=True)
-with cluster(jobs_def, master=master, quiet=False, **extra_kw) as targets:
+with cluster(jobs_def, master=master, quiet=False, **extra_kw) as c:
     graph = tf.Graph()
     with graph.as_default():
         with tf.device(tf.train.replica_device_setter(ps_tasks=nserver)):
@@ -55,17 +55,12 @@ with cluster(jobs_def, master=master, quiet=False, **extra_kw) as targets:
             correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-            version = tuple(map(int, (tf.__version__.split("."))))
-            if version < (0, 12, 0):
-                init_op = tf.initialize_all_variables()
-            else:
-                init_op = tf.global_variables_initializer()
-
+            init_op = tf.global_variables_initializer()
             coord = tf.train.Coordinator()
 
         def train(i):
             with graph.as_default():
-                with tf.Session(targets['/job:worker/task:%d' % i]) as sess:
+                with tf.Session(c.targets['/job:worker/task:%d' % i]) as sess:
                     step = 0
                     while not coord.should_stop() and step < 10000:
                         with _lock:
@@ -74,7 +69,7 @@ with cluster(jobs_def, master=master, quiet=False, **extra_kw) as targets:
                         _, step = sess.run([steps[i], global_step], feed_dict={x: batch_xs, y_: batch_ys})
                     coord.request_stop()
 
-        with tf.Session(targets['/job:worker/task:0']) as sess:
+        with tf.Session(c.targets['/job:worker/task:0']) as sess:
             sess.run(init_op)
             threads = [Thread(target=train, args=(i,)) for i in range(nworker)]
             for t in threads:

@@ -57,7 +57,8 @@ class Task(object):
         >''' % (self.mesos_task_id, self.addr))
 
     def to_task_info(self, offer, master_addr, gpu_uuids=[],
-                     gpu_resource_type=None, containerizer_type='MESOS'):
+                     gpu_resource_type=None, containerizer_type='MESOS',
+                     force_pull_image=False):
         ti = Dict()
         ti.task_id.value = str(self.mesos_task_id)
         ti.agent_id.value = offer.agent_id.value
@@ -82,6 +83,7 @@ class Task(object):
             if containerizer_type == 'DOCKER':
                 ti.container.type = 'DOCKER'
                 ti.container.docker.image = image
+                ti.container.docker.force_pull_image = force_pull_image
 
                 ti.container.docker.parameters = parameters = []
                 p = Dict()
@@ -118,6 +120,8 @@ class Task(object):
                 ti.container.type = 'MESOS'
                 ti.container.mesos.image.type = 'DOCKER'
                 ti.container.mesos.image.docker.name = image
+                # "cached" means the opposite of "force_pull_image"
+                ti.container.mesos.image.cached = not force_pull_image
 
             else:
                 assert False, (
@@ -171,13 +175,15 @@ class TFMesosScheduler(Scheduler):
 
     def __init__(self, task_spec, role=None, master=None, name=None,
                  quiet=False, volumes={}, containerizer_type=None,
-                 forward_addresses=None, protocol='grpc'):
+                 force_pull_image=False, forward_addresses=None,
+                 protocol='grpc'):
         self.started = False
         self.master = master or os.environ['MESOS_MASTER']
         self.name = name or '[tensorflow] %s %s' % (
             os.path.abspath(sys.argv[0]), ' '.join(sys.argv[1:]))
         self.task_spec = task_spec
         self.containerizer_type = containerizer_type
+        self.force_pull_image = force_pull_image
         self.protocol = protocol
         self.forward_addresses = forward_addresses
         self.role = role or '*'
@@ -252,7 +258,8 @@ class TFMesosScheduler(Scheduler):
                     task.to_task_info(
                         offer, self.addr, gpu_uuids=gpu_uuids,
                         gpu_resource_type=gpu_resource_type,
-                        containerizer_type=self.containerizer_type
+                        containerizer_type=self.containerizer_type,
+                        force_pull_image=self.force_pull_image
                     )
                 )
 

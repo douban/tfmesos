@@ -169,8 +169,8 @@ class Task(object):
 
 class TFMesosScheduler(Scheduler):
 
-    def __init__(self, task_spec, role=None, master=None, name=None, quiet=False,
-                 volumes={}, containerizer_type=None,
+    def __init__(self, task_spec, role=None, master=None, name=None,
+                 quiet=False, volumes={}, containerizer_type=None,
                  forward_addresses=None, protocol='grpc'):
         self.started = False
         self.master = master or os.environ['MESOS_MASTER']

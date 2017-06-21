@@ -25,6 +25,7 @@ parser.add_argument('-Gs', '--server-gpus', type=int, default=0)
 parser.add_argument('-Ms', '--server-mem', type=float, default=1024.0)
 parser.add_argument('-v', '--verbose', action='store_true')
 parser.add_argument('-V', '--volume', type=str, action='append')
+parser.add_argument('-Mr', '--mesos_role', type=str, action='store')
 parser.add_argument('cmd', type=str)
 parser.add_argument('args', nargs='*')
 
@@ -76,7 +77,7 @@ lfd.listen(10)
 fds = [lfd]
 forward_addresses = {'/job:%s/task:%s' % (worker_name, 0): addr}
 
-with cluster(jobs_def, master=args.master, quiet=not args.verbose,
+with cluster(jobs_def, role=args.mesos_role, master=args.master, quiet=not args.verbose,
              volumes=volumes, forward_addresses=forward_addresses,
              **extra_kw) as cluster:
     while not cluster.finished():

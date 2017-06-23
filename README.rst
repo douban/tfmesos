@@ -69,7 +69,7 @@ Running in replica mode
 ------------------------
 This mode is called `Between-graph replication` in official `Distributed Tensorflow Howto <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/g3doc/how_tos/distributed/index.md#replicated-training>`_
 
-Most distributed training models that Google has open sourced (such as `mnist_replica <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/tools/dist_test/python/mnist_replica.py>`_ and `inception <https://github.com/tensorflow/models/blob/master/inception/inception/inception_distributed_train.py>`_) are using this mode. In this mode, two kind of Jobs are defined with the names `'ps'` and `'wocker'`. `'ps'` tasks act as `'Parameter Server'` and `'worker'` tasks run the actual training process.
+Most distributed training models that Google has open sourced (such as `mnist_replica <https://github.com/tensorflow/tensorflow/blob/master/tensorflow/tools/dist_test/python/mnist_replica.py>`_ and `inception <https://github.com/tensorflow/models/blob/master/inception/inception/inception_distributed_train.py>`_) are using this mode. In this mode, two kind of Jobs are defined with the names `'ps'` and `'worker'`. `'ps'` tasks act as `'Parameter Server'` and `'worker'` tasks run the actual training process.
 
 Here we use our modified `'mnist_replica' <https://github.com/douban/tfmesos/blob/master/examples/mnist/mnist_replica.py>`_ as example:
 

@@ -169,8 +169,8 @@ class Task(object):
 
 class TFMesosScheduler(Scheduler):
 
-    def __init__(self, task_spec, master=None, name=None, quiet=False,
-                 volumes={}, containerizer_type=None,
+    def __init__(self, task_spec, role=None, master=None, name=None,
+                 quiet=False, volumes={}, containerizer_type=None,
                  forward_addresses=None, protocol='grpc'):
         self.started = False
         self.master = master or os.environ['MESOS_MASTER']
@@ -180,6 +180,7 @@ class TFMesosScheduler(Scheduler):
         self.containerizer_type = containerizer_type
         self.protocol = protocol
         self.forward_addresses = forward_addresses
+        self.role = role or '*'
         self.tasks = []
         self.job_finished = {}
         for job in task_spec:
@@ -310,6 +311,7 @@ class TFMesosScheduler(Scheduler):
             framework.user = getpass.getuser()
             framework.name = self.name
             framework.hostname = socket.gethostname()
+            framework.role = self.role
 
             self.driver = MesosSchedulerDriver(
                 self, framework, self.master, use_addict=True

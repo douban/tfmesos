@@ -17,6 +17,7 @@ parser.add_argument(
     '-C', '--containerizer_type', choices=['MESOS', 'DOCKER'],
     nargs='?', type=lambda s: s.upper()
 )
+parser.add_argument('-f', '--force_pull_image', action="store_true")
 parser.add_argument('-Cw', '--worker-cpus', type=float, default=1.0)
 parser.add_argument('-Gw', '--worker-gpus', type=int, default=0)
 parser.add_argument('-Mw', '--worker-mem', type=float, default=1024.0)
@@ -44,6 +45,9 @@ nworker = args.nworker
 extra_kw = {}
 if args.containerizer_type:
     extra_kw['containerizer_type'] = args.containerizer_type
+
+if args.force_pull_image:
+    extra_kw['force_pull_image'] = args.force_pull_image
 
 jobs_def = [
     dict(

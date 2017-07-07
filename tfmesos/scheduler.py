@@ -11,6 +11,7 @@ from six import iteritems
 from six.moves import urllib
 from pymesos import Scheduler, MesosSchedulerDriver
 from tfmesos.utils import send, recv, setup_logger
+import uuid
 
 
 FOREVER = 0xFFFFFFFF
@@ -172,6 +173,7 @@ class Task(object):
 
 
 class TFMesosScheduler(Scheduler):
+    MAX_FAILURE_COUNT = 3
 
     def __init__(self, task_spec, role=None, master=None, name=None,
                  quiet=False, volumes={}, containerizer_type=None,
@@ -187,14 +189,14 @@ class TFMesosScheduler(Scheduler):
         self.protocol = protocol
         self.forward_addresses = forward_addresses
         self.role = role or '*'
-        self.tasks = []
+        self.tasks = {}
+        self.task_failure_count = {}
         self.job_finished = {}
         for job in task_spec:
             self.job_finished[job.name] = 0
             for task_index in range(job.start, job.num):
-                mesos_task_id = len(self.tasks)
-                self.tasks.append(
-                    Task(
+                mesos_task_id = str(uuid.uuid4())
+                task = Task(
                         mesos_task_id,
                         job.name,
                         task_index,
@@ -204,7 +206,8 @@ class TFMesosScheduler(Scheduler):
                         cmd=job.cmd,
                         volumes=volumes
                     )
-                )
+                self.tasks[mesos_task_id] = task
+                self.task_failure_count[self.decorated_task_index(task)] = 0
         if not quiet:
             global logger
             setup_logger(logger)
@@ -215,7 +218,7 @@ class TFMesosScheduler(Scheduler):
         '''
 
         for offer in offers:
-            if all(task.offered for task in self.tasks):
+            if all(task.offered for id, task in self.tasks.iteritems()):
                 self.driver.suppressOffers()
                 driver.declineOffer(offer.id, Dict(refuse_seconds=FOREVER))
                 continue
@@ -238,7 +241,7 @@ class TFMesosScheduler(Scheduler):
 
                     gpu_resource_type = resource.type
 
-            for task in self.tasks:
+            for id, task in self.tasks.iteritems():
                 if task.offered:
                     continue
 
@@ -268,7 +271,7 @@ class TFMesosScheduler(Scheduler):
     @property
     def targets(self):
         targets = {}
-        for task in self.tasks:
+        for id, task in self.tasks.iteritems():
             target_name = '/job:%s/task:%s' % (task.job_name, task.task_index)
             grpc_addr = 'grpc://%s' % task.addr
             targets[target_name] = grpc_addr
@@ -277,10 +280,10 @@ class TFMesosScheduler(Scheduler):
     def _start_tf_cluster(self):
         cluster_def = {}
 
-        for task in self.tasks:
+        for id, task in self.tasks.iteritems():
             cluster_def.setdefault(task.job_name, []).append(task.addr)
 
-        for task in self.tasks:
+        for id, task in self.tasks.iteritems():
             response = {
                 'job_name': task.job_name,
                 'task_index': task.task_index,
@@ -324,12 +327,11 @@ class TFMesosScheduler(Scheduler):
                 self, framework, self.master, use_addict=True
             )
             self.driver.start()
-            while any((not task.initalized for task in self.tasks)):
+            while any((not task.initalized for id, task in self.tasks.iteritems())):
                 if readable(lfd):
                     c, _ = lfd.accept()
                     if readable(c):
                         mesos_task_id, addr = recv(c)
-                        assert isinstance(mesos_task_id, int)
                         task = self.tasks[mesos_task_id]
                         task.addr = addr
                         task.connection = c
@@ -359,23 +361,50 @@ class TFMesosScheduler(Scheduler):
             )
 
     def statusUpdate(self, driver, update):
-        mesos_task_id = int(update.task_id.value)
-        if update.state != 'TASK_RUNNING':
+        logger.info('Received status update %s', str(update))
+        mesos_task_id = update.task_id.value
+        if self._is_terminal_state(update.state):
             task = self.tasks[mesos_task_id]
             if self.started:
                 if update.state != 'TASK_FINISHED':
-                    logger.error('Task failed: %s, %s', task, update.message)
+                    logger.error('Task failed: %s, %s with state %s', task, update.message, update.state)
                     raise RuntimeError(
-                        'Task %s failed! %s' % (task, update.message)
+                        'Task %s failed! %s with state %s' % (task, update.message, update.state)
                     )
                 else:
                     self.job_finished[task.job_name] += 1
             else:
-                logger.warn('Task failed: %s, %s', task, update.message)
+                logger.warn('Task failed while launching the server: %s, %s with state %s', task,
+                            update.message, update.state)
+
                 if task.connection:
                     task.connection.close()
 
-                driver.reviveOffers()
+                self.task_failure_count[self.decorated_task_index(task)] += 1
+
+                if self.can_revive_task(task):
+                    logger.info('Going to revive task %s ', task.task_index)
+                    self.tasks.pop(mesos_task_id)
+                    task.offered = False
+                    new_task_id = task.mesos_task_id = str(uuid.uuid4())
+                    self.tasks[new_task_id] = task
+                    driver.reviveOffers()
+                else:
+                    raise RuntimeError('Task %s failed %s with state %s and retries=%s' %
+                                       (task, update.message, update.state, TFMesosScheduler.MAX_FAILURE_COUNT))
+
+    def can_revive_task(self, task):
+        return self.task_failure_count[self.decorated_task_index(task)] < TFMesosScheduler.MAX_FAILURE_COUNT
+
+    @staticmethod
+    def decorated_task_index(task):
+        return '{}.{}'.format(task.job_name, str(task.task_index))
+
+    @staticmethod
+    def _is_terminal_state(task_state):
+        return task_state in ["TASK_FINISHED", "TASK_FAILED", "TASK_KILLED",
+                              "TASK_ERROR"]
+
 
     def slaveLost(self, driver, agent_id):
         if self.started:
@@ -395,7 +424,7 @@ class TFMesosScheduler(Scheduler):
         logger.debug('exit')
 
         if hasattr(self, 'tasks'):
-            for task in getattr(self, 'tasks', []):
+            for id, task in self.tasks.iteritems():
                 if task.connection:
                     task.connection.close()
 

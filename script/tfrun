@@ -13,6 +13,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-w', '--nworker', type=int, required=True)
 parser.add_argument('-s', '--nserver', type=int, required=True)
 parser.add_argument('-m', '--master', type=str)
+parser.add_argument('-n', '--name', type=str, help='Mesos framework name to register as.')
 parser.add_argument(
     '-C', '--containerizer_type', choices=['MESOS', 'DOCKER'],
     nargs='?', type=lambda s: s.upper()
@@ -81,8 +82,10 @@ lfd.listen(10)
 fds = [lfd]
 forward_addresses = {'/job:%s/task:%s' % (worker_name, 0): addr}
 
-with cluster(jobs_def, role=args.role, master=args.master, quiet=not args.verbose,
-             volumes=volumes, forward_addresses=forward_addresses,
+
+with cluster(jobs_def, role=args.role, master=args.master,
+             quiet=not args.verbose, volumes=volumes, name=args.name,
+             forward_addresses=forward_addresses,
              **extra_kw) as cluster:
     while not cluster.finished():
         readables = select.select(fds, [], [], 0.1)[0]

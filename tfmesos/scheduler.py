@@ -362,7 +362,7 @@ class TFMesosScheduler(Scheduler):
             )
 
     def statusUpdate(self, driver, update):
-        logger.info('Received status update %s', str(update))
+        logger.debug('Received status update %s', str(update))
         mesos_task_id = update.task_id.value
         if self._is_terminal_state(update.state):
             task = self.tasks[mesos_task_id]

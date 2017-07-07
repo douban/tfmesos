@@ -9,7 +9,6 @@ from tfmesos.utils import send, recv
 
 def main(argv):
     mesos_task_id, maddr = argv[1:]
-    mesos_task_id = int(mesos_task_id)
     maddr = maddr.split(':', 2)
     maddr = (maddr[0], int(maddr[1]))
     lfd = socket.socket()

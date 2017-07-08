@@ -327,6 +327,7 @@ class TFMesosScheduler(Scheduler):
                 self, framework, self.master, use_addict=True
             )
             self.driver.start()
+            task_start_count = 0
             while any((not task.initalized
                        for id, task in self.tasks.iteritems())):
                 if readable(lfd):
@@ -337,6 +338,15 @@ class TFMesosScheduler(Scheduler):
                         task.addr = addr
                         task.connection = c
                         task.initalized = True
+                        task_start_count += 1
+                        logger.info('Task %s with mesos_task_id %s has '
+                                    'registered',
+                                    '{}:{}'.format(task.job_name,
+                                                   task.task_index),
+                                    mesos_task_id)
+                        logger.info('Out of %d tasks '
+                                    '%d tasks have been registered',
+                                    len(self.tasks), task_start_count)
                     else:
                         c.close()
 
@@ -362,7 +372,7 @@ class TFMesosScheduler(Scheduler):
             )
 
     def statusUpdate(self, driver, update):
-        logger.debug('Received status update %s', str(update))
+        logger.debug('Received status update %s', str(update.state))
         mesos_task_id = update.task_id.value
         if self._is_terminal_state(update.state):
             task = self.tasks[mesos_task_id]
@@ -427,7 +437,7 @@ class TFMesosScheduler(Scheduler):
         raise RuntimeError('Error ' + message)
 
     def stop(self):
-        logger.debug('exit')
+        logger.info('exit')
 
         if hasattr(self, 'tasks'):
             for id, task in self.tasks.iteritems():

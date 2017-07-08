@@ -18,7 +18,7 @@ def recv(fd):
 def setup_logger(logger):
     FORMAT = '%(asctime)-11s [%(levelname)s] [%(name)-9s] %(message)s'
     formatter = logging.Formatter(FORMAT)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
 
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.DEBUG)

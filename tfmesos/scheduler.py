@@ -402,21 +402,24 @@ class TFMesosScheduler(Scheduler):
                 self.task_failure_count[self.decorated_task_index(task)] += 1
 
                 if self.can_revive_task(task):
-                    logger.info('Going to revive task %s ', task.task_index)
-                    self.tasks.pop(mesos_task_id)
-                    task.offered = False
-                    task.addr = None
-                    task.connection = None
-                    new_task_id = task.mesos_task_id = str(uuid.uuid4())
-                    self.tasks[new_task_id] = task
-                    driver.reviveOffers()
+                    self.revive_task(mesos_task_id, task)
                 else:
                     raise RuntimeError('Task %s failed %s with state %s and '
                                        'retries=%s' %
                                        (task, update.message, update.state,
                                         TFMesosScheduler.MAX_FAILURE_COUNT))
 
-    def can_revive_task(self, task):
+    def revive_task(self, mesos_task_id, task):
+        logger.info('Going to revive task %s ', task.task_index)
+        self.tasks.pop(mesos_task_id)
+        task.offered = False
+        task.addr = None
+        task.connection = None
+        new_task_id = task.mesos_task_id = str(uuid.uuid4())
+        self.tasks[new_task_id] = task
+        driver.reviveOffers()
+
+    def _can_revive_task(self, task):
         return self.task_failure_count[self.decorated_task_index(task)] < \
                TFMesosScheduler.MAX_FAILURE_COUNT
 

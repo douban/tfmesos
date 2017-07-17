@@ -218,7 +218,7 @@ class TFMesosScheduler(Scheduler):
         '''
 
         for offer in offers:
-            if all(task.offered for id, task in self.tasks.iteritems()):
+            if all(task.offered for id, task in iteritems(self.tasks)):
                 self.driver.suppressOffers()
                 driver.declineOffer(offer.id, Dict(refuse_seconds=FOREVER))
                 continue
@@ -241,7 +241,7 @@ class TFMesosScheduler(Scheduler):
 
                     gpu_resource_type = resource.type
 
-            for id, task in self.tasks.iteritems():
+            for id, task in iteritems(self.tasks):
                 if task.offered:
                     continue
 
@@ -271,7 +271,7 @@ class TFMesosScheduler(Scheduler):
     @property
     def targets(self):
         targets = {}
-        for id, task in self.tasks.iteritems():
+        for id, task in iteritems(self.tasks):
             target_name = '/job:%s/task:%s' % (task.job_name, task.task_index)
             grpc_addr = 'grpc://%s' % task.addr
             targets[target_name] = grpc_addr
@@ -280,10 +280,10 @@ class TFMesosScheduler(Scheduler):
     def _start_tf_cluster(self):
         cluster_def = {}
 
-        for id, task in self.tasks.iteritems():
+        for id, task in iteritems(self.tasks):
             cluster_def.setdefault(task.job_name, []).append(task.addr)
 
-        for id, task in self.tasks.iteritems():
+        for id, task in iteritems(self.tasks):
             response = {
                 'job_name': task.job_name,
                 'task_index': task.task_index,
@@ -329,7 +329,7 @@ class TFMesosScheduler(Scheduler):
             self.driver.start()
             task_start_count = 0
             while any((not task.initalized
-                       for id, task in self.tasks.iteritems())):
+                       for id, task in iteritems(self.tasks))):
                 if readable(lfd):
                     c, _ = lfd.accept()
                     if readable(c):
@@ -375,7 +375,12 @@ class TFMesosScheduler(Scheduler):
         logger.debug('Received status update %s', str(update.state))
         mesos_task_id = update.task_id.value
         if self._is_terminal_state(update.state):
-            task = self.tasks[mesos_task_id]
+            task = self.tasks.get(mesos_task_id)
+            if task is None:
+                # This should be very rare and hence making this info.
+                logger.info("Task not found for mesos task id {}"
+                            .format(mesos_task_id))
+                return
             if self.started:
                 if update.state != 'TASK_FINISHED':
                     logger.error('Task failed: %s, %s with state %s', task,
@@ -400,6 +405,8 @@ class TFMesosScheduler(Scheduler):
                     logger.info('Going to revive task %s ', task.task_index)
                     self.tasks.pop(mesos_task_id)
                     task.offered = False
+                    task.addr = None
+                    task.connection = None
                     new_task_id = task.mesos_task_id = str(uuid.uuid4())
                     self.tasks[new_task_id] = task
                     driver.reviveOffers()
@@ -437,10 +444,10 @@ class TFMesosScheduler(Scheduler):
         raise RuntimeError('Error ' + message)
 
     def stop(self):
-        logger.info('exit')
+        logger.debug('exit')
 
         if hasattr(self, 'tasks'):
-            for id, task in self.tasks.iteritems():
+            for id, task in iteritems(self.tasks):
                 if task.connection:
                     task.connection.close()
 

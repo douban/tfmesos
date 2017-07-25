@@ -401,7 +401,7 @@ class TFMesosScheduler(Scheduler):
 
                 self.task_failure_count[self.decorated_task_index(task)] += 1
 
-                if self.can_revive_task(task):
+                if self._can_revive_task(task):
                     self.revive_task(driver, mesos_task_id, task)
                 else:
                     raise RuntimeError('Task %s failed %s with state %s and '

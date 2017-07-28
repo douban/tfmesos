@@ -4,8 +4,10 @@ import sys
 import socket
 import subprocess
 import tensorflow as tf
+import logging
 from tfmesos.utils import send, recv
 
+logger = logging.getLogger(__name__)
 
 def main(argv):
     mesos_task_id, maddr = argv[1:]
@@ -29,6 +31,8 @@ def main(argv):
     gpus = response["gpus"]
     cmd = response["cmd"]
     cwd = response["cwd"]
+    extra_config = response['extra_config']
+
     forward_addresses = response['forward_addresses']
     protocol = response['protocol']
 
@@ -59,6 +63,10 @@ def main(argv):
         except:
             return
     else:
+        if extra_config['initializer'] is not None:
+            initial_cmd = extra_config['initializer']
+            subprocess.check_call(initial_cmd, shell=True)
+
         server_name = 'ps'
         worker_name = 'worker'
         ps_hosts = ','.join(cluster_def[server_name])
@@ -68,7 +76,15 @@ def main(argv):
             ps_hosts=ps_hosts, worker_hosts=worker_hosts,
             job_name=job_name, task_index=task_index
         )
-        subprocess.check_call(cmd, shell=True, cwd=cwd, stdout=forward_fd)
+        try:
+            subprocess.check_call(cmd, shell=True, cwd=cwd, stdout=forward_fd)
+        except subprocess.CalledProcessError as e:
+            if extra_config['finalizer'] is not None:
+                final_cmd = extra_config['finalizer']
+                logger.info('Running clean up command {}'.format(final_cmd))
+                subprocess.check_call(final_cmd, shell=True)
+            raise e
+
         if forward_fd:
             forward_fd.close()
 

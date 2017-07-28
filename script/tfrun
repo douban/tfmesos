@@ -28,6 +28,7 @@ parser.add_argument('-Ms', '--server-mem', type=float, default=1024.0)
 parser.add_argument('-v', '--verbose', action='store_true')
 parser.add_argument('-V', '--volume', type=str, action='append')
 parser.add_argument('-r', '--role', type=str, action='store')
+parser.add_argument('-e', '--extra_config', type=str, action='store')
 parser.add_argument('cmd', type=str)
 parser.add_argument('args', nargs='*')
 
@@ -49,6 +50,9 @@ if args.containerizer_type:
 
 if args.force_pull_image:
     extra_kw['force_pull_image'] = args.force_pull_image
+
+if args.extra_config:
+    extra_kw['extra_config'] = args.extra_config
 
 jobs_def = [
     dict(

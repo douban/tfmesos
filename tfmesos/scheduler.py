@@ -178,7 +178,7 @@ class TFMesosScheduler(Scheduler):
     def __init__(self, task_spec, role=None, master=None, name=None,
                  quiet=False, volumes={}, containerizer_type=None,
                  force_pull_image=False, forward_addresses=None,
-                 protocol='grpc'):
+                 protocol='grpc', extra_config=None):
         self.started = False
         self.master = master or os.environ['MESOS_MASTER']
         self.name = name or '[tensorflow] %s %s' % (
@@ -187,6 +187,7 @@ class TFMesosScheduler(Scheduler):
         self.containerizer_type = containerizer_type
         self.force_pull_image = force_pull_image
         self.protocol = protocol
+        self.extra_config = extra_config
         self.forward_addresses = forward_addresses
         self.role = role or '*'
         self.tasks = {}
@@ -294,6 +295,7 @@ class TFMesosScheduler(Scheduler):
                 'cwd': os.getcwd(),
                 'cluster_def': cluster_def,
                 'forward_addresses': self.forward_addresses,
+                'extra_config': self.extra_config,
                 'protocol': self.protocol
             }
             send(task.connection, response)

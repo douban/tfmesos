@@ -9,6 +9,7 @@ from tfmesos.utils import send, recv
 
 logger = logging.getLogger(__name__)
 
+
 def main(argv):
     mesos_task_id, maddr = argv[1:]
     maddr = maddr.split(':', 2)

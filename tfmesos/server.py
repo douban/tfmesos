@@ -78,12 +78,11 @@ def main(argv):
         )
         try:
             subprocess.check_call(cmd, shell=True, cwd=cwd, stdout=forward_fd)
-        except subprocess.CalledProcessError as e:
+        finally:
             if extra_config['finalizer'] is not None:
                 final_cmd = extra_config['finalizer']
                 logger.info('Running clean up command {}'.format(final_cmd))
                 subprocess.check_call(final_cmd, shell=True)
-            raise e
 
         if forward_fd:
             forward_fd.close()

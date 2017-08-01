@@ -282,7 +282,16 @@ class TFMesosScheduler(Scheduler):
         cluster_def = {}
 
         for id, task in iteritems(self.tasks):
-            cluster_def.setdefault(task.job_name, []).append(task.addr)
+            if task.job_name is 'worker':
+                cluster_def.setdefault(task.job_name, []).append(task)
+            else:
+                cluster_def.setdefault(task.job_name, []).append(task.addr)
+
+        worker_tasks = cluster_def['worker']
+        worker_addr = map(lambda x: x.addr, sorted(worker_tasks,
+                                                   key=lambda x: x.task_index))
+
+        cluster_def['worker'] = worker_addr
 
         for id, task in iteritems(self.tasks):
             response = {

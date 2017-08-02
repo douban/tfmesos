@@ -158,12 +158,13 @@ class Task(object):
                 gpus.type = 'SCALAR'
                 gpus.scalar.value = len(gpu_uuids)
 
-        ti.command.shell = True
-        cmd = [
-            sys.executable, '-m', '%s.server' % __package__,
-            str(self.mesos_task_id), master_addr
+        ti.command.shell = False
+        ti.command.value = sys.executable
+        ti.command.arguments = [
+            '-m', '%s.server' % __package__, str(self.mesos_task_id),
+            master_addr
         ]
-        ti.command.value = ' '.join(cmd)
+
         ti.command.environment.variables = variables = []
         env = Dict()
         variables.append(env)

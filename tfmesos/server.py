@@ -1,13 +1,23 @@
 # coding: utf-8
-
+import atexit
 import sys
 import socket
 import subprocess
 import tensorflow as tf
 import logging
+import signal
+
 from tfmesos.utils import send, recv
 
 logger = logging.getLogger(__name__)
+
+
+def run_cmd(cmd):
+    def cleanup(signal=None, frame=None):
+        logger.info('Running command {}'.format(cmd))
+        subprocess.check_call(cmd, shell=True)
+
+    return cleanup
 
 
 def main(argv):
@@ -77,16 +87,23 @@ def main(argv):
             ps_hosts=ps_hosts, worker_hosts=worker_hosts,
             job_name=job_name, task_index=task_index
         )
-        try:
-            subprocess.check_call(cmd, shell=True, cwd=cwd, stdout=forward_fd)
-        finally:
-            if extra_config['finalizer'] is not None:
-                final_cmd = extra_config['finalizer']
-                logger.info('Running clean up command {}'.format(final_cmd))
-                subprocess.check_call(final_cmd, shell=True)
+
+        if 'finalizer' in extra_config:
+            register_cleanup(run_cmd(extra_config['finalizer']),
+                             signal.SIGTERM)
+
+        subprocess.check_call(cmd, shell=True, cwd=cwd, stdout=forward_fd)
 
         if forward_fd:
             forward_fd.close()
+
+
+def register_cleanup(fun, exit_signal=None):
+    if exit_signal is None:
+        atexit.register(fun)
+    else:
+        signal.signal(exit_signal, fun)
+        atexit.register(fun)
 
 
 if __name__ == '__main__':

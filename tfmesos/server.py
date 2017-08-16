@@ -64,8 +64,8 @@ def main(argv):
         except:
             return
     else:
-        if extra_config['initializer'] is not None:
-            initial_cmd = extra_config['initializer']
+        initial_cmd = extra_config.get('initializer')
+        if initial_cmd is not None:
             subprocess.check_call(initial_cmd, shell=True)
 
         server_name = 'ps'
@@ -80,8 +80,8 @@ def main(argv):
         try:
             subprocess.check_call(cmd, shell=True, cwd=cwd, stdout=forward_fd)
         finally:
-            if extra_config['finalizer'] is not None:
-                final_cmd = extra_config['finalizer']
+            final_cmd = extra_config.get('finalizer')
+            if final_cmd is not None:
                 logger.info('Running clean up command {}'.format(final_cmd))
                 subprocess.check_call(final_cmd, shell=True)
 

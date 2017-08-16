@@ -178,7 +178,7 @@ class TFMesosScheduler(Scheduler):
     def __init__(self, task_spec, role=None, master=None, name=None,
                  quiet=False, volumes={}, containerizer_type=None,
                  force_pull_image=False, forward_addresses=None,
-                 protocol='grpc', extra_config=None):
+                 protocol='grpc', extra_config={}):
         self.started = False
         self.master = master or os.environ['MESOS_MASTER']
         self.name = name or '[tensorflow] %s %s' % (
@@ -281,7 +281,8 @@ class TFMesosScheduler(Scheduler):
     def _start_tf_cluster(self):
         cluster_def = {}
 
-        for id, task in iteritems(self.tasks):
+        tasks = sorted(self.tasks.values(), key=lambda task: task.task_index)
+        for task in tasks:
             cluster_def.setdefault(task.job_name, []).append(task.addr)
 
         for id, task in iteritems(self.tasks):

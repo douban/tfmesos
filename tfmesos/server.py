@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import os
 import sys
 import socket
 import subprocess
@@ -72,21 +73,33 @@ def main(argv):
         worker_name = 'worker'
         ps_hosts = ','.join(cluster_def[server_name])
         worker_hosts = ','.join(cluster_def[worker_name])
+        env = os.environ.copy()
+        env['PYTHONUNBUFFERED'] = '1'
+        prefix = '[%s:%s] ' % (job_name, task_index)
+        prefix = prefix.encode('ascii')
 
         cmd = cmd.format(
             ps_hosts=ps_hosts, worker_hosts=worker_hosts,
             job_name=job_name, task_index=task_index
         )
+        out = os.fdopen(sys.stdout.fileno(), 'wb', 1)
         try:
-            subprocess.check_call(cmd, shell=True, cwd=cwd, stdout=forward_fd)
+            p = subprocess.Popen(cmd, shell=True, cwd=cwd, stdout=subprocess.PIPE, bufsize=1, env=env)
+            for l in iter(p.stdout.readline, b''):
+                out.write(l)
+                if forward_fd:
+                    forward_fd.send(prefix + l)
+
+            sys.exit(p.wait())
         finally:
             final_cmd = extra_config.get('finalizer')
             if final_cmd is not None:
                 logger.info('Running clean up command {}'.format(final_cmd))
                 subprocess.check_call(final_cmd, shell=True)
 
-        if forward_fd:
-            forward_fd.close()
+            out.close()
+            if forward_fd:
+                forward_fd.close()
 
 
 if __name__ == '__main__':

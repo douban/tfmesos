@@ -28,6 +28,7 @@ parser.add_argument('-v', '--verbose', action='store_true')
 parser.add_argument('-V', '--volume', type=str, action='append')
 parser.add_argument('-r', '--role', type=str, action='store')
 parser.add_argument('-e', '--extra_config', type=str, action='store')
+parser.add_argument('--worker-logs', type=str, help='Comma seperated worker ids, to bring logs back. "*" to bring all workers\' log back', default='0')
 parser.add_argument('cmd', type=str)
 parser.add_argument('args', nargs='*')
 
@@ -84,7 +85,13 @@ lfd.bind(('', 0))
 addr = (socket.gethostname(), lfd.getsockname()[1])
 lfd.listen(10)
 fds = [lfd]
-forward_addresses = {'/job:%s/task:%s' % (worker_name, 0): addr}
+
+if args.worker_logs == '*':
+    forward_workers = range(nworker)
+else:
+    forward_workers = map(int, args.worker_logs.split(','))
+
+forward_addresses = {'/job:%s/task:%s' % (worker_name, i): addr for i in forward_workers}
 
 
 with cluster(jobs_def, role=args.role, master=args.master,

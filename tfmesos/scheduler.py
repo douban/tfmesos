@@ -198,17 +198,17 @@ class TFMesosScheduler(Scheduler):
             for task_index in range(job.start, job.num):
                 mesos_task_id = str(uuid.uuid4())
                 task = Task(
-                        mesos_task_id,
-                        job.name,
-                        task_index,
-                        cpus=job.cpus,
-                        mem=job.mem,
-                        gpus=job.gpus,
-                        cmd=job.cmd,
-                        volumes=volumes
-                    )
-                self.tasks[mesos_task_id] = task
-                self.task_failure_count[self.decorated_task_index(task)] = 0
+                    mesos_task_id,
+                    job.name,
+                    task_index,
+                    cpus=job.cpus,
+                    mem=job.mem,
+                    gpus=job.gpus,
+                    cmd=job.cmd,
+                    volumes=volumes
+                )
+            self.tasks[mesos_task_id] = task
+            self.task_failure_count[self.decorated_task_index(task)] = 0
         if not quiet:
             global logger
             setup_logger(logger)
@@ -424,7 +424,7 @@ class TFMesosScheduler(Scheduler):
 
     def _can_revive_task(self, task):
         return self.task_failure_count[self.decorated_task_index(task)] < \
-               TFMesosScheduler.MAX_FAILURE_COUNT
+            TFMesosScheduler.MAX_FAILURE_COUNT
 
     @staticmethod
     def decorated_task_index(task):

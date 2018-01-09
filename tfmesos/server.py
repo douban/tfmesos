@@ -62,8 +62,8 @@ def main(argv):
 
         try:
             server.join()
-        except:
-            return
+        except Exception:
+            return 0
     else:
         initial_cmd = extra_config.get('initializer')
         if initial_cmd is not None:
@@ -84,13 +84,16 @@ def main(argv):
         )
         out = os.fdopen(sys.stdout.fileno(), 'wb', 1)
         try:
-            p = subprocess.Popen(cmd, shell=True, cwd=cwd, stdout=subprocess.PIPE, bufsize=1, env=env)
+            p = subprocess.Popen(
+                cmd, shell=True, cwd=cwd, stdout=subprocess.PIPE,
+                bufsize=1, env=env
+            )
             for l in iter(p.stdout.readline, b''):
                 out.write(l)
                 if forward_fd:
                     forward_fd.send(prefix + l)
 
-            sys.exit(p.wait())
+            return p.wait()
         finally:
             final_cmd = extra_config.get('finalizer')
             if final_cmd is not None:

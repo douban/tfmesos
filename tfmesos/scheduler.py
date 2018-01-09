@@ -207,8 +207,9 @@ class TFMesosScheduler(Scheduler):
                     cmd=job.cmd,
                     volumes=volumes
                 )
-            self.tasks[mesos_task_id] = task
-            self.task_failure_count[self.decorated_task_index(task)] = 0
+                self.tasks[mesos_task_id] = task
+                self.task_failure_count[self.decorated_task_index(task)] = 0
+
         if not quiet:
             global logger
             setup_logger(logger)

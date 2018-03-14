@@ -74,7 +74,15 @@ def main(argv):
         ps_hosts = ','.join(cluster_def[server_name])
         worker_hosts = ','.join(cluster_def[worker_name])
         env = os.environ.copy()
-        env['PYTHONUNBUFFERED'] = '1'
+        env.update({
+            'PYTHONUNBUFFERED': '1',
+            'TFMESOS_PS_HOSTS': ps_hosts,
+            'TFMESOS_WORKER_HOSTS': worker_hosts,
+            'TFMESOS_JOB_NAME': job_name,
+            'TFMESOS_TASK_INDEX': str(task_index),
+            'TFMESOS_DISTRIBUTED': '1'
+        })
+
         prefix = '[%s:%s] ' % (job_name, task_index)
         prefix = prefix.encode('ascii')
 

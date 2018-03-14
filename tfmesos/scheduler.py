@@ -34,7 +34,7 @@ class Job(object):
 class Task(object):
 
     def __init__(self, mesos_task_id, job_name, task_index,
-                 cpus=1.0, mem=1024.0, gpus=0, cmd=None, volumes={}):
+                 cpus=1.0, mem=1024.0, gpus=0, cmd=None, volumes={}, env={}):
         self.mesos_task_id = mesos_task_id
         self.job_name = job_name
         self.task_index = task_index
@@ -44,6 +44,7 @@ class Task(object):
         self.mem = mem
         self.cmd = cmd
         self.volumes = volumes
+        self.env = env
         self.offered = False
 
         self.addr = None
@@ -164,7 +165,11 @@ class Task(object):
             str(self.mesos_task_id), master_addr
         ]
         ti.command.value = ' '.join(cmd)
-        ti.command.environment.variables = variables = []
+        ti.command.environment.variables = variables = [
+            Dict(name=name, value=value)
+            for name, value in self.env.items()
+            if name != 'PYTHONPATH'
+        ]
         env = Dict()
         variables.append(env)
         env.name = 'PYTHONPATH'
@@ -178,7 +183,7 @@ class TFMesosScheduler(Scheduler):
     def __init__(self, task_spec, role=None, master=None, name=None,
                  quiet=False, volumes={}, containerizer_type=None,
                  force_pull_image=False, forward_addresses=None,
-                 protocol='grpc', extra_config={}):
+                 protocol='grpc', env={}, extra_config={}):
         self.started = False
         self.master = master or os.environ['MESOS_MASTER']
         self.name = name or '[tensorflow] %s %s' % (
@@ -205,7 +210,8 @@ class TFMesosScheduler(Scheduler):
                     mem=job.mem,
                     gpus=job.gpus,
                     cmd=job.cmd,
-                    volumes=volumes
+                    volumes=volumes,
+                    env=env
                 )
                 self.tasks[mesos_task_id] = task
                 self.task_failure_count[self.decorated_task_index(task)] = 0

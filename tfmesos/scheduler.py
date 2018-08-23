@@ -479,4 +479,3 @@ class TFMesosScheduler(Scheduler):
     def processHeartBeat(self):
         # compatibility with pymesos
         pass
-

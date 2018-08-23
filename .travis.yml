@@ -10,15 +10,15 @@ addons:
 matrix:
     include:
         - python: 2.7
-          env: TOX_ENV=py27
+          env: TOXENV=py27
         - python: 3.5
-          env: TOX_ENV=py35
+          env: TOXENV=py35
 install:
     - pip install -U pip
     - pip install setuptools
     - pip install tox
 script:
-    - tox -e $TOX_ENV
+    - tox
 deploy:
     provider: pypi
     skip_existing: true

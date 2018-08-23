@@ -475,3 +475,8 @@ class TFMesosScheduler(Scheduler):
         return any(
             self.job_finished[job.name] >= job.num for job in self.task_spec
         )
+
+    def processHeartBeat(self):
+        # compatibility with pymesos
+        pass
+

@@ -2,17 +2,20 @@ language: python
 cache:
     directories:
         "$HOME/.cache/pip"
-python: 3.5
 sudo: false
 addons:
     apt:
         packages:
             libzookeeper-mt-dev
-env:
-    - TOX_ENV=py27
-    - TOX_ENV=py35
+matrix:
+    include:
+        - python: 2.7
+          env: TOX_ENV=py27
+        - python: 3.5
+          env: TOX_ENV=py35
 install:
     - pip install -U pip
+    - pip install setuptools
     - pip install tox
 script:
     - tox -e $TOX_ENV

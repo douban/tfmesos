@@ -4,7 +4,7 @@ http-parser==0.8.3
 mock==2.0.0
 numpy==1.11.3
 pbr==1.10.0
-protobuf==3.1.0
+protobuf==3.15.0
 pymesos==0.2.9
 six==1.10.0
 tensorflow-gpu==0.12.0
